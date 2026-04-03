@@ -34,6 +34,12 @@ export async function trackEvent({ userId, eventType, productId = '', category =
   return fetch(`${BASE}/search/event?${params}`, { method: 'POST' });
 }
 
+export async function expandSearch(query, { userId = 'anonymous', size = 10 } = {}) {
+  const params = new URLSearchParams({ q: query, user_id: userId, size });
+  const res = await fetch(`${BASE}/search/expand?${params}`);
+  return res.json();
+}
+
 export async function getLiveMetrics(hours = 24) {
   const res = await fetch(`${BASE}/metrics/live?hours=${hours}`);
   return res.json();

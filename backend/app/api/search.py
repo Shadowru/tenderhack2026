@@ -144,6 +144,43 @@ async def suggest(
     return {"suggestions": suggestions}
 
 
+@router.get("/expand")
+async def expand_search(
+    q: str = Query(..., min_length=1, max_length=500),
+    user_id: str = Query("anonymous"),
+    size: int = Query(10, ge=1, le=30),
+    engine: SearchEngine = Depends(get_es_engine),
+    tracker: PersonalizationTracker = Depends(get_tracker),
+):
+    """AI-powered query expansion: LLM reformulates vague queries, searches each."""
+    from app.search.llm_expander import search_with_expansion
+    from app.search.spelling import fix_keyboard_layout, normalize_query
+
+    q = normalize_query(q)
+    layout_fix = fix_keyboard_layout(q)
+    if layout_fix:
+        q = layout_fix
+
+    user_boosts = None
+    category_boosts = None
+    if user_id != "anonymous":
+        await tracker.load_buyer_history(user_id)
+        user_boosts, category_boosts = await tracker.get_user_boosts(user_id)
+        if not user_boosts:
+            user_boosts = None
+        if not category_boosts:
+            category_boosts = None
+
+    result = await search_with_expansion(
+        engine=engine,
+        query=q,
+        user_boosts=user_boosts,
+        category_boosts=category_boosts,
+        size=size,
+    )
+    return result
+
+
 @router.post("/event")
 async def track_event(
     user_id: str,
