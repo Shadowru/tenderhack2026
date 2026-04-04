@@ -289,6 +289,27 @@ export default function SearchPage({ userId }) {
   const [aiResults, setAiResults] = useState(null)
   const [aiLoading, setAiLoading] = useState(false)
 
+  // Reset results when user switches organization
+  const prevUserId = useRef(userId)
+  useEffect(() => {
+    if (prevUserId.current !== userId) {
+      prevUserId.current = userId
+      setResults(null)
+      setAiResults(null)
+      setSuggestions([])
+      setActiveCategory(null)
+      setOffset(0)
+      // Re-run search if there's a query
+      if (query.trim()) {
+        // small delay to let state settle
+        setTimeout(() => {
+          searchProducts(query, { userId, size: PAGE_SIZE, offset: 0, sessionId: SESSION_ID })
+            .then(data => setResults(data))
+        }, 100)
+      }
+    }
+  }, [userId, query])
+
   // Dwell time tracking: store when last item was clicked
   const dwellTimestamp = useRef(null)
   const lastClickedItem = useRef(null)
