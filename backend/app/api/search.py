@@ -40,12 +40,12 @@ async def search(
     engine: EngineDep,
     tracker: TrackerDep,
     db: DbDep,
-    q: str = Query(..., min_length=1, max_length=500),
-    user_id: str = Query("anonymous"),
-    session_id: str = Query(""),
-    size: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
-    category: str | None = Query(None),
+    q: Annotated[str, Query(min_length=1, max_length=500)],
+    user_id: Annotated[str, Query()] = "anonymous",
+    session_id: Annotated[str, Query()] = "",
+    size: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    category: Annotated[str | None, Query()] = None,
 ):
     original_query = q
     q = normalize_query(q)
@@ -120,8 +120,8 @@ async def search(
 async def suggest(
     engine: EngineDep,
     tracker: TrackerDep,
-    q: str = Query(..., min_length=1, max_length=200),
-    user_id: str = Query("anonymous"),
+    q: Annotated[str, Query(min_length=1, max_length=200)],
+    user_id: Annotated[str, Query()] = "anonymous",
 ):
     q = normalize_query(q)
     layout_fix = fix_keyboard_layout(q)
@@ -155,9 +155,9 @@ async def suggest(
 async def expand_search(
     engine: EngineDep,
     tracker: TrackerDep,
-    q: str = Query(..., min_length=1, max_length=500),
-    user_id: str = Query("anonymous"),
-    size: int = Query(10, ge=1, le=30),
+    q: Annotated[str, Query(min_length=1, max_length=500)],
+    user_id: Annotated[str, Query()] = "anonymous",
+    size: Annotated[int, Query(ge=1, le=30)] = 10,
 ):
     """AI-powered query expansion: LLM reformulates vague queries, searches each."""
     from app.search.llm_expander import search_with_expansion

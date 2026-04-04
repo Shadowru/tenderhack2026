@@ -17,7 +17,7 @@ TrackerDep = Annotated[PersonalizationTracker, Depends(get_tracker)]
 @router.get("/live")
 async def live_metrics(
     db: DbDep,
-    hours: int = Query(24, ge=1, le=720),
+    hours: Annotated[int, Query(ge=1, le=720)] = 24,
 ):
     """Живые метрики за последние N часов."""
     return await compute_live_metrics(db, hours)
@@ -27,7 +27,7 @@ async def live_metrics(
 async def metric_history(
     metric_name: str,
     db: DbDep,
-    days: int = Query(7, ge=1, le=90),
+    days: Annotated[int, Query(ge=1, le=90)] = 7,
 ):
     """История метрики для графика."""
     data = await get_metric_history(db, metric_name, days)
