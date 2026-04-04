@@ -164,6 +164,28 @@ function ProductCardModal({ product, onClose, onAddToCart, onToggleFavorite, fav
                 </div>
               </div>
             </div>
+            {/* Specs preview */}
+            {specRows.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-portal-border">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] text-portal-text-muted uppercase tracking-wider font-semibold">Характеристики</span>
+                  {specRows.length > 5 && (
+                    <button type="button" onClick={() => setActiveTab('specs')}
+                      className="text-[11px] text-portal-blue hover:underline">
+                      Все {specRows.length} характеристик
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                  {specRows.slice(0, 6).map(([key, value], i) => (
+                    <div key={i} className="flex text-xs">
+                      <span className="text-portal-text-muted mr-1.5 flex-shrink-0">{key}:</span>
+                      <span className="text-portal-text truncate">{value || '—'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
