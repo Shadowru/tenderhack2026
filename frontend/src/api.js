@@ -65,6 +65,25 @@ export async function clearCart(userId) {
   return fetch(`${BASE}/cart/clear?user_id=${userId}`, { method: 'POST' }).then(r => r.json());
 }
 
+export async function getFavorites(userId) {
+  const res = await fetch(`${BASE}/cart/favorites?user_id=${userId}`);
+  return res.json();
+}
+
+export async function addFavorite(userId, productId, productName = '', category = '') {
+  const params = new URLSearchParams({ user_id: userId, product_id: productId, product_name: productName, category });
+  return fetch(`${BASE}/cart/favorites/add?${params}`, { method: 'POST' }).then(r => r.json());
+}
+
+export async function removeFavorite(userId, productId) {
+  const params = new URLSearchParams({ user_id: userId, product_id: productId });
+  return fetch(`${BASE}/cart/favorites/remove?${params}`, { method: 'POST' }).then(r => r.json());
+}
+
+export async function clearFavorites(userId) {
+  return fetch(`${BASE}/cart/favorites/clear?user_id=${userId}`, { method: 'POST' }).then(r => r.json());
+}
+
 export async function getLiveMetrics(hours = 24) {
   const res = await fetch(`${BASE}/metrics/live?hours=${hours}`);
   return res.json();

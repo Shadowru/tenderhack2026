@@ -19,6 +19,10 @@ def _names_key(user_id: str) -> str:
     return f"cart_names:{user_id}"
 
 
+def _favorites_key(user_id: str) -> str:
+    return f"favorites:{user_id}"
+
+
 @router.get("")
 async def get_cart(
     tracker: TrackerDep,
@@ -114,4 +118,78 @@ async def clear_cart(
     redis = tracker.redis
     await redis.delete(_cart_key(user_id))
     await redis.delete(_names_key(user_id))
+    return {"ok": True, "user_id": user_id}
+
+
+# ---------------------------------------------------------------------------
+# Favorites endpoints
+# ---------------------------------------------------------------------------
+
+@router.get("/favorites")
+async def get_favorites(
+    tracker: TrackerDep,
+    user_id: Annotated[str, Query()] = "anonymous",
+):
+    """Return favorites as list of {product_id, product_name}."""
+    redis = tracker.redis
+    key = _favorites_key(user_id)
+    raw = await redis.hgetall(key)
+    items = []
+    for k, v in raw.items():
+        pid = k.decode() if isinstance(k, bytes) else k
+        name = v.decode() if isinstance(v, bytes) else v
+        items.append({"product_id": pid, "product_name": name or pid})
+    return {"user_id": user_id, "items": items}
+
+
+@router.post("/favorites/add")
+async def add_favorite(
+    tracker: TrackerDep,
+    user_id: Annotated[str, Query()] = "anonymous",
+    product_id: Annotated[str, Query()] = "",
+    product_name: Annotated[str, Query()] = "",
+    category: Annotated[str, Query()] = "",
+):
+    """Add product to favorites."""
+    if not product_id:
+        return {"ok": False, "error": "product_id is required"}
+
+    redis = tracker.redis
+    key = _favorites_key(user_id)
+    await redis.hset(key, product_id, product_name or product_id)
+
+    if user_id != "anonymous":
+        await tracker.track_event(
+            user_id=user_id,
+            event_type="click",
+            product_id=product_id,
+            category=category,
+        )
+
+    return {"ok": True, "product_id": product_id}
+
+
+@router.post("/favorites/remove")
+async def remove_favorite(
+    tracker: TrackerDep,
+    user_id: Annotated[str, Query()] = "anonymous",
+    product_id: Annotated[str, Query()] = "",
+):
+    """Remove product from favorites."""
+    if not product_id:
+        return {"ok": False, "error": "product_id is required"}
+
+    redis = tracker.redis
+    await redis.hdel(_favorites_key(user_id), product_id)
+    return {"ok": True, "product_id": product_id}
+
+
+@router.post("/favorites/clear")
+async def clear_favorites(
+    tracker: TrackerDep,
+    user_id: Annotated[str, Query()] = "anonymous",
+):
+    """Clear all favorites."""
+    redis = tracker.redis
+    await redis.delete(_favorites_key(user_id))
     return {"ok": True, "user_id": user_id}

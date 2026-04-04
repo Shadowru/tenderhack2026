@@ -71,10 +71,13 @@ function Toast({ message, visible }) {
   )
 }
 
-function ProductCardModal({ product, onClose, onAddToCart, userId }) {
+function ProductCardModal({ product, onClose, onAddToCart, onToggleFavorite, favoriteIds, userId }) {
   const [addedToCart, setAddedToCart] = useState(false)
 
   if (!product) return null
+
+  const productId = product.id || product.product_id
+  const isFavorited = favoriteIds ? favoriteIds.has(productId) : false
 
   // Parse specifications: may be a plain string "key: value\nkey: value" or an object
   const parseSpecs = (specs) => {
@@ -104,6 +107,12 @@ function ProductCardModal({ product, onClose, onAddToCart, userId }) {
     if (onAddToCart) {
       onAddToCart(product)
       setAddedToCart(true)
+    }
+  }
+
+  const handleToggleFavorite = () => {
+    if (onToggleFavorite) {
+      onToggleFavorite(product)
     }
   }
 
@@ -200,6 +209,23 @@ function ProductCardModal({ product, onClose, onAddToCart, userId }) {
             >
               Закрыть
             </button>
+            {onToggleFavorite && (
+              <button
+                type="button"
+                onClick={handleToggleFavorite}
+                aria-label={isFavorited ? 'Убрать из избранного' : 'Добавить в избранное'}
+                className="flex items-center justify-center w-9 h-9 rounded border transition-colors"
+                style={{
+                  borderColor: isFavorited ? '#ef4444' : '#d1d5db',
+                  backgroundColor: isFavorited ? '#fef2f2' : 'transparent',
+                  color: isFavorited ? '#ef4444' : '#8c96ad',
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill={isFavorited ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+              </button>
+            )}
             {onAddToCart && (
               <button
                 type="button"
@@ -424,7 +450,7 @@ function AiExpansionBlock({ aiLoading, aiResults, onClickItem, onSearchQuery }) 
 
 const PAGE_SIZE = 20
 
-export default function SearchPage({ userId, onAddToCart }) {
+export default function SearchPage({ userId, onAddToCart, onToggleFavorite, favoriteIds }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState(null)
   const [suggestions, setSuggestions] = useState([])
@@ -633,6 +659,8 @@ export default function SearchPage({ userId, onAddToCart }) {
           product={selectedProduct}
           onClose={handleCloseProduct}
           onAddToCart={onAddToCart}
+          onToggleFavorite={onToggleFavorite}
+          favoriteIds={favoriteIds}
           userId={userId}
         />
       )}
