@@ -177,7 +177,7 @@ function ResultCard({ item, idx, onClickItem, query, userId }) {
 }
 
 function AiExpansionBlock({ aiLoading, aiResults, onClickItem, onSearchQuery }) {
-  const [expanded, setExpanded] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
 
   const hasResults = aiResults?.expansions?.length > 0
   const itemCount = aiResults?.items?.length || 0
@@ -185,19 +185,16 @@ function AiExpansionBlock({ aiLoading, aiResults, onClickItem, onSearchQuery }) 
   if (!aiLoading && !aiResults) return null
 
   return (
-    <div className="mt-5">
-      {/* Header — always visible, clickable to expand/collapse */}
+    <div className="mt-5 bg-white rounded border border-purple-200 overflow-hidden">
+      {/* Header bar */}
       <button
-        onClick={() => hasResults && setExpanded(!expanded)}
-        className="w-full flex items-center gap-2 py-2 text-left"
-        disabled={!hasResults}
+        onClick={() => hasResults && setCollapsed(!collapsed)}
+        className="w-full flex items-center gap-2.5 px-4 py-3 bg-purple-50 border-b border-purple-100 text-left hover:bg-purple-100 transition-colors"
       >
-        <div className="w-5 h-5 rounded bg-purple-100 flex items-center justify-center flex-shrink-0">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2.5">
-            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-          </svg>
-        </div>
-        <span className="text-sm font-semibold text-gov-800">AI-расширение поиска</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2.5" className="flex-shrink-0">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+        <span className="text-sm font-semibold text-purple-800">AI-расширение поиска</span>
 
         {aiLoading && (
           <svg className="animate-spin h-3.5 w-3.5 text-purple-500" viewBox="0 0 24 24" fill="none">
@@ -207,69 +204,68 @@ function AiExpansionBlock({ aiLoading, aiResults, onClickItem, onSearchQuery }) 
         )}
 
         {hasResults && !aiLoading && (
-          <>
-            <span className="text-xs text-purple-500 bg-purple-50 rounded-full px-2 py-0.5 border border-purple-200">
-              {itemCount} найдено
-            </span>
-            <div className="flex-1" />
-            <svg
-              width="14" height="14" viewBox="0 0 24 24" fill="none"
-              stroke="#8c96ad" strokeWidth="2"
-              className={`transition-transform ${expanded ? 'rotate-180' : ''}`}
-            >
-              <path d="m6 9 6 6 6-6"/>
-            </svg>
-          </>
+          <span className="text-xs text-purple-600 font-medium">{itemCount} товаров</span>
         )}
 
         {aiResults && !hasResults && !aiLoading && (
-          <span className="text-xs text-grayish-400 italic">ничего дополнительного не найдено</span>
+          <span className="text-xs text-grayish-400 italic">ничего дополнительного</span>
+        )}
+
+        <div className="flex-1" />
+
+        {hasResults && (
+          <svg
+            width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="#7c3aed" strokeWidth="2"
+            className={`flex-shrink-0 transition-transform ${collapsed ? '' : 'rotate-180'}`}
+          >
+            <path d="m6 9 6 6 6-6"/>
+          </svg>
         )}
       </button>
 
       {/* Loading state */}
       {aiLoading && !aiResults && (
-        <div className="mt-2 px-4 py-4 bg-purple-50 border border-purple-100 rounded text-center text-sm text-purple-500">
+        <div className="px-4 py-5 text-center text-sm text-purple-500">
           Анализирую категории и подбираю товары...
         </div>
       )}
 
-      {/* Expanded content */}
-      {expanded && hasResults && (
-        <div className="mt-2 animate-in">
+      {/* Content — shown by default, collapsible */}
+      {!collapsed && hasResults && (
+        <div className="p-4">
           {/* Category chips */}
           <div className="flex flex-wrap gap-1.5 mb-3">
             {aiResults.expansions.map((exp, i) => (
               <button
                 key={i}
                 onClick={() => onSearchQuery(exp.query)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-50 text-purple-700 text-xs rounded-full border border-purple-200 hover:bg-purple-100 transition-colors"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded border border-purple-200 hover:bg-purple-100 transition-colors"
               >
-                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                </svg>
                 {exp.query}
                 {exp.category && (
-                  <span className="text-purple-400 text-[10px]">{exp.category.length > 30 ? exp.category.slice(0, 28) + '...' : exp.category}</span>
+                  <span className="text-purple-400 text-[10px] font-normal">
+                    {exp.category.length > 35 ? exp.category.slice(0, 33) + '...' : exp.category}
+                  </span>
                 )}
               </button>
             ))}
           </div>
 
-          {/* Compact item list */}
+          {/* Item list */}
           <div className="space-y-1">
             {aiResults.items?.slice(0, 5).map((item, idx) => (
               <div
                 key={`ai-${item.id || idx}`}
                 onClick={() => onClickItem(item, idx + 1)}
-                className="flex items-center gap-2.5 px-3 py-2 rounded border border-purple-50 hover:border-purple-200 hover:bg-purple-50 transition-all cursor-pointer group"
+                className="flex items-center gap-2.5 px-3 py-2 rounded bg-white border border-purple-100 hover:border-purple-300 hover:bg-purple-50 transition-all cursor-pointer group"
               >
-                <span className="text-[9px] text-purple-400 bg-purple-50 rounded px-1 py-0 font-bold flex-shrink-0">AI</span>
-                <span className="text-sm text-gov-800 group-hover:text-purple-600 transition-colors truncate flex-1">
+                <span className="text-[9px] text-white bg-purple-500 rounded px-1.5 py-0.5 font-bold flex-shrink-0 leading-none">AI</span>
+                <span className="text-sm text-gov-800 group-hover:text-purple-700 transition-colors truncate flex-1">
                   {item.name}
                 </span>
-                <span className="text-[10px] text-grayish-300 flex-shrink-0 hidden sm:inline">
-                  {item.found_in_category ? item.found_in_category.slice(0, 25) : item.category?.slice(0, 25)}
+                <span className="text-[10px] text-grayish-400 flex-shrink-0 hidden sm:inline max-w-[200px] truncate">
+                  {item.found_in_category || item.category}
                 </span>
               </div>
             ))}
