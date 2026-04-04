@@ -328,13 +328,38 @@ function ResultCard({ item, idx, onClickItem, query, userId, favoriteIds, onTogg
       {/* Expanded content */}
       {expanded && (
         <div className="mt-3 pt-3 border-t border-grayish-100 space-y-3 animate-in">
+          {/* Formula */}
+          {item.formula && (
+            <div className="px-3 py-2 bg-portal-blue-light rounded border border-blue-200">
+              <p className="text-[10px] text-portal-blue uppercase tracking-wider font-semibold mb-1">Формула расчёта скора</p>
+              <p className="text-xs font-mono text-portal-text font-medium">{item.formula}</p>
+            </div>
+          )}
+
           {/* Ranking reasons */}
           {hasReasons && (
             <div>
               <p className="text-[10px] text-grayish-400 uppercase tracking-wider font-semibold mb-2">
                 Факторы ранжирования
               </p>
-              <ReasonBar reasons={item.reasons} />
+              <div className="space-y-1">
+                {item.reasons.map((r, i) => (
+                  <div key={i} className="flex items-center justify-between text-xs">
+                    <span className={`flex items-center gap-1.5 ${
+                      r.type === 'personalization' ? 'text-purple-600' :
+                      r.type === 'popularity' ? 'text-amber-700' : 'text-portal-blue'
+                    }`}>
+                      {REASON_ICONS[r.type]}
+                      {r.label}
+                    </span>
+                    {r.value && (
+                      <span className="font-mono font-semibold text-portal-text text-[11px] bg-gray-100 px-1.5 py-0.5 rounded">
+                        {r.value}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

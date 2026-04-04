@@ -489,6 +489,18 @@ class SearchEngine:
             reasons = self._build_reasons(
                 source, query_lower, query_words, boosted_ids, boosted_cats
             )
+            # Build formula string from reasons
+            formula_parts = ["BM25"]
+            for r in reasons:
+                v = r.get("value", "")
+                if v and r["type"] == "text_match":
+                    formula_parts[0] = f"BM25({r['label'].split('(')[0].strip()})"
+                elif v and r["type"] == "popularity":
+                    formula_parts.append(v)
+                elif v and r["type"] == "personalization":
+                    formula_parts.append(v)
+            formula = " × ".join(formula_parts) + f" = {hit['_score']:.1f}"
+
             item = {
                 "id": source.get("id"),
                 "name": source.get("name"),
@@ -502,6 +514,7 @@ class SearchEngine:
                 "score": hit["_score"],
                 "highlight": hit.get("highlight", {}),
                 "reasons": reasons,
+                "formula": formula,
             }
             items.append(item)
         return {
@@ -519,76 +532,62 @@ class SearchEngine:
         boosted_ids: set,
         boosted_cats: set,
     ) -> list[dict]:
-        """Построить причины ранжирования из данных документа (без explain)."""
+        """Построить причины ранжирования с числовыми значениями для формулы."""
+        import math
         reasons = []
         name = (source.get("name") or "").lower()
         subject = (source.get("subject") or "").lower()
         category = (source.get("category") or "").lower()
         specs = (source.get("specifications") or "").lower()
-
-        # Subject match — главный фактор
-        if any(w in subject for w in query_words) or query in subject:
-            reasons.append({
-                "type": "text_match",
-                "label": "Основной предмет совпадает с запросом",
-                "score": None,
-            })
-        elif subject and any(subject.startswith(q[:3]) for q in query_words if len(q) >= 3):
-            reasons.append({
-                "type": "text_match",
-                "label": "Предмет товара похож на запрос",
-                "score": None,
-            })
-
-        # Name match
-        if any(w in name for w in query_words) or query in name:
-            reasons.append({
-                "type": "text_match",
-                "label": "Совпадение в названии",
-                "score": None,
-            })
-
-        # Category match
-        if any(w in category for w in query_words):
-            reasons.append({
-                "type": "text_match",
-                "label": "Совпадение в категории",
-                "score": None,
-            })
-
-        # Specs match
-        if any(w in specs for w in query_words if len(w) >= 4):
-            reasons.append({
-                "type": "text_match",
-                "label": "Совпадение в характеристиках",
-                "score": None,
-            })
-
-        # Popularity
+        pop = source.get("popularity", 0)
         count = source.get("purchase_count", 0)
-        if count > 0:
-            reasons.append({
-                "type": "popularity",
-                "label": f"Востребованность: {count} закупок",
-                "score": None,
-            })
-
-        # Product-level personalization
         doc_id = source.get("id", "")
+
+        # --- Text match factors ---
+        subject_match = any(w in subject for w in query_words) or query in subject
+        subject_prefix = not subject_match and subject and any(
+            subject.startswith(q[:3]) for q in query_words if len(q) >= 3
+        )
+        name_match = any(w in name for w in query_words) or query in name
+        category_match = any(w in category for w in query_words)
+        specs_match = any(w in specs for w in query_words if len(w) >= 4)
+
+        if subject_match:
+            reasons.append({"type": "text_match", "label": "Предмет = запрос (subject x5)", "value": "x5"})
+        elif subject_prefix:
+            reasons.append({"type": "text_match", "label": "Предмет похож (prefix)", "value": "x3"})
+        if name_match:
+            reasons.append({"type": "text_match", "label": "Совпадение в названии (name x3)", "value": "x3"})
+        if category_match:
+            reasons.append({"type": "text_match", "label": "Совпадение в категории (x2)", "value": "x2"})
+        if specs_match:
+            reasons.append({"type": "text_match", "label": "Совпадение в характеристиках (x1)", "value": "x1"})
+
+        # --- Popularity multiplier ---
+        pop_mult = math.log(pop * 0.5 + 2, 2) if pop > 0 else 1.0
+        reasons.append({
+            "type": "popularity",
+            "label": f"Популярность: {count} закупок",
+            "value": f"x{pop_mult:.2f}",
+        })
+
+        # --- Product boost ---
         if doc_id in boosted_ids:
             reasons.append({
                 "type": "personalization",
-                "label": "Релевантно вашей истории закупок",
-                "score": None,
+                "label": "Товар в вашей истории / избранном",
+                "value": "x1.5-2.0",
             })
 
-        # Category-level personalization
+        # --- Category boost ---
+
+        # --- Category boost ---
         raw_category = source.get("category", "")
         if raw_category and raw_category in boosted_cats:
             reasons.append({
                 "type": "personalization",
-                "label": "Совпадает с вашими предпочитаемыми категориями",
-                "score": None,
+                "label": "Ваша категория закупок",
+                "value": "x1.01-1.05",
             })
 
         return reasons
