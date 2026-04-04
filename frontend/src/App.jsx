@@ -340,8 +340,11 @@ export default function App() {
       const found = DEMO_USERS.find(u => u.inn === savedInn)
       if (found) {
         setSelectedUser(found)
-        return
+      } else {
+        // Custom INN — restore as ad-hoc user
+        setSelectedUser({ inn: savedInn, name: `ИНН ${savedInn}`, type: 'Другое', icon: '' })
       }
+      return
     }
     setShowModal(true)
   }, [])
