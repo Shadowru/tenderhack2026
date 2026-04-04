@@ -176,6 +176,110 @@ function ResultCard({ item, idx, onClickItem, query, userId }) {
   )
 }
 
+function AiExpansionBlock({ aiLoading, aiResults, onClickItem, onSearchQuery }) {
+  const [expanded, setExpanded] = useState(false)
+
+  const hasResults = aiResults?.expansions?.length > 0
+  const itemCount = aiResults?.items?.length || 0
+
+  if (!aiLoading && !aiResults) return null
+
+  return (
+    <div className="mt-5">
+      {/* Header — always visible, clickable to expand/collapse */}
+      <button
+        onClick={() => hasResults && setExpanded(!expanded)}
+        className="w-full flex items-center gap-2 py-2 text-left"
+        disabled={!hasResults}
+      >
+        <div className="w-5 h-5 rounded bg-purple-100 flex items-center justify-center flex-shrink-0">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2.5">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+          </svg>
+        </div>
+        <span className="text-sm font-semibold text-gov-800">AI-расширение поиска</span>
+
+        {aiLoading && (
+          <svg className="animate-spin h-3.5 w-3.5 text-purple-500" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+        )}
+
+        {hasResults && !aiLoading && (
+          <>
+            <span className="text-xs text-purple-500 bg-purple-50 rounded-full px-2 py-0.5 border border-purple-200">
+              {itemCount} найдено
+            </span>
+            <div className="flex-1" />
+            <svg
+              width="14" height="14" viewBox="0 0 24 24" fill="none"
+              stroke="#8c96ad" strokeWidth="2"
+              className={`transition-transform ${expanded ? 'rotate-180' : ''}`}
+            >
+              <path d="m6 9 6 6 6-6"/>
+            </svg>
+          </>
+        )}
+
+        {aiResults && !hasResults && !aiLoading && (
+          <span className="text-xs text-grayish-400 italic">ничего дополнительного не найдено</span>
+        )}
+      </button>
+
+      {/* Loading state */}
+      {aiLoading && !aiResults && (
+        <div className="mt-2 px-4 py-4 bg-purple-50 border border-purple-100 rounded text-center text-sm text-purple-500">
+          Анализирую категории и подбираю товары...
+        </div>
+      )}
+
+      {/* Expanded content */}
+      {expanded && hasResults && (
+        <div className="mt-2 animate-in">
+          {/* Category chips */}
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {aiResults.expansions.map((exp, i) => (
+              <button
+                key={i}
+                onClick={() => onSearchQuery(exp.query)}
+                className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-50 text-purple-700 text-xs rounded-full border border-purple-200 hover:bg-purple-100 transition-colors"
+              >
+                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+                {exp.query}
+                {exp.category && (
+                  <span className="text-purple-400 text-[10px]">{exp.category.length > 30 ? exp.category.slice(0, 28) + '...' : exp.category}</span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Compact item list */}
+          <div className="space-y-1">
+            {aiResults.items?.slice(0, 5).map((item, idx) => (
+              <div
+                key={`ai-${item.id || idx}`}
+                onClick={() => onClickItem(item, idx + 1)}
+                className="flex items-center gap-2.5 px-3 py-2 rounded border border-purple-50 hover:border-purple-200 hover:bg-purple-50 transition-all cursor-pointer group"
+              >
+                <span className="text-[9px] text-purple-400 bg-purple-50 rounded px-1 py-0 font-bold flex-shrink-0">AI</span>
+                <span className="text-sm text-gov-800 group-hover:text-purple-600 transition-colors truncate flex-1">
+                  {item.name}
+                </span>
+                <span className="text-[10px] text-grayish-300 flex-shrink-0 hidden sm:inline">
+                  {item.found_in_category ? item.found_in_category.slice(0, 25) : item.category?.slice(0, 25)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const PAGE_SIZE = 20
 
 export default function SearchPage({ userId }) {
@@ -579,84 +683,13 @@ export default function SearchPage({ userId }) {
             )}
           </div>
 
-          {/* AI expansion results */}
-          {(aiLoading || aiResults) && (
-            <div className="mt-6">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-5 h-5 rounded bg-purple-100 flex items-center justify-center flex-shrink-0">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2.5">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                  </svg>
-                </div>
-                <h3 className="text-sm font-semibold text-gov-800">AI-расширение поиска</h3>
-                {aiLoading && (
-                  <svg className="animate-spin h-4 w-4 text-purple-500" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                  </svg>
-                )}
-              </div>
-
-              {aiLoading && !aiResults && (
-                <div className="gov-card border-purple-100 text-center py-6 text-sm text-grayish-400">
-                  <p>Переформулирую запрос с помощью AI...</p>
-                  <p className="text-xs mt-1">Это может занять несколько секунд</p>
-                </div>
-              )}
-
-              {aiResults && aiResults.expansions?.length > 0 && (
-                <div className="space-y-3">
-                  {/* Show what AI reformulated */}
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {aiResults.expansions.map((exp, i) => (
-                      <button
-                        key={i}
-                        onClick={() => { setQuery(exp.query); doSearch(exp.query) }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 text-xs font-medium rounded-full border border-purple-200 hover:bg-purple-100 transition-colors"
-                      >
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                        </svg>
-                        {exp.query}
-                        <span className="text-purple-400">({exp.found})</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* AI-found items */}
-                  <div className="space-y-2">
-                    {aiResults.items?.map((item, idx) => (
-                      <div key={`ai-${item.id || idx}`} className="gov-card border-purple-100 hover:border-purple-300 transition-all cursor-pointer group" onClick={() => handleClick(item, idx + 1)}>
-                        <div className="flex items-start gap-3">
-                          <span className="text-[10px] text-purple-400 bg-purple-50 rounded px-1.5 py-0.5 font-medium flex-shrink-0 mt-0.5">AI</span>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-sm font-medium text-gov-800 group-hover:text-purple-600 transition-colors leading-snug">
-                              {item.name}
-                            </h3>
-                            <div className="flex items-center gap-2 mt-1">
-                              {item.category && (
-                                <span className="text-xs text-grayish-400">{item.category}</span>
-                              )}
-                              {item.found_by_expansion && (
-                                <span className="text-[10px] text-purple-400">
-                                  via &laquo;{item.found_by_expansion}&raquo;
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <span className="text-xs text-grayish-300 font-mono flex-shrink-0">{item.score?.toFixed(1)}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {aiResults && (!aiResults.expansions || aiResults.expansions.length === 0) && (
-                <p className="text-xs text-grayish-400 italic">AI не смог предложить альтернативные формулировки</p>
-              )}
-            </div>
-          )}
+          {/* AI expansion results — collapsible */}
+          <AiExpansionBlock
+            aiLoading={aiLoading}
+            aiResults={aiResults}
+            onClickItem={handleClick}
+            onSearchQuery={(q) => { setQuery(q); doSearch(q) }}
+          />
         </div>
       )}
 
