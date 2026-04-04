@@ -31,6 +31,15 @@ const TYPE_COLORS = {
 }
 
 function UserSelectorModal({ onSelect }) {
+  const [customInn, setCustomInn] = useState('')
+
+  const handleCustomLogin = () => {
+    const inn = customInn.trim()
+    if (inn.length >= 10) {
+      onSelect({ inn, name: `ИНН ${inn}`, type: 'Другое', icon: '' })
+    }
+  }
+
   return (
     <div className="modal-overlay">
       <div className="modal-panel">
@@ -85,9 +94,34 @@ function UserSelectorModal({ onSelect }) {
           </div>
         </div>
 
+        {/* Custom INN entry */}
+        <div className="px-8 pb-4">
+          <div className="border-t border-grayish-100 pt-4">
+            <p className="text-xs text-grayish-500 mb-2 font-medium">Или введите ИНН организации:</p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={customInn}
+                onChange={e => setCustomInn(e.target.value.replace(/\D/g, '').slice(0, 12))}
+                placeholder="ИНН (10 или 12 цифр)"
+                className="flex-1 px-3 py-2 text-sm border border-grayish-200 rounded focus:outline-none focus:border-portal-blue focus:ring-1 focus:ring-portal-blue"
+                onKeyDown={e => e.key === 'Enter' && handleCustomLogin()}
+              />
+              <button
+                type="button"
+                onClick={handleCustomLogin}
+                disabled={customInn.trim().length < 10}
+                className="portal-btn px-4 py-2 text-sm disabled:opacity-40"
+              >
+                Войти
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div className="px-8 pb-6 text-center">
           <p className="text-xs text-grayish-400">
-            Это демонстрационный режим. Данные организаций взяты из открытых реестров госзакупок.
+            Демо-режим. Данные из открытых реестров госзакупок. Произвольный ИНН покажет базовый поиск.
           </p>
         </div>
       </div>
