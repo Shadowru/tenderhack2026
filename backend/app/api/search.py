@@ -1,6 +1,8 @@
 """API роуты поиска."""
 import hashlib
 import json
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +13,11 @@ from app.personalization.tracker import PersonalizationTracker
 from app.models.schemas import SearchEvent
 
 router = APIRouter(prefix="/api/search", tags=["search"])
+
+# Annotated dependencies for SonarQube compliance
+EngineDep = Annotated[SearchEngine, Depends(get_es_engine)]
+TrackerDep = Annotated[PersonalizationTracker, Depends(get_tracker)]
+DbDep = Annotated[AsyncSession, Depends(get_db)]
 
 # TTLs for search result caching
 _TTL_AUTHENTICATED = 60    # seconds — short because personalization changes results
@@ -30,15 +37,15 @@ def _suggest_cache_key(query: str) -> str:
 
 @router.get("")
 async def search(
+    engine: EngineDep,
+    tracker: TrackerDep,
+    db: DbDep,
     q: str = Query(..., min_length=1, max_length=500),
     user_id: str = Query("anonymous"),
     session_id: str = Query(""),
     size: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     category: str | None = Query(None),
-    engine: SearchEngine = Depends(get_es_engine),
-    tracker: PersonalizationTracker = Depends(get_tracker),
-    db: AsyncSession = Depends(get_db),
 ):
     original_query = q
     q = normalize_query(q)
@@ -111,10 +118,10 @@ async def search(
 
 @router.get("/suggest")
 async def suggest(
+    engine: EngineDep,
+    tracker: TrackerDep,
     q: str = Query(..., min_length=1, max_length=200),
     user_id: str = Query("anonymous"),
-    engine: SearchEngine = Depends(get_es_engine),
-    tracker: PersonalizationTracker = Depends(get_tracker),
 ):
     q = normalize_query(q)
     layout_fix = fix_keyboard_layout(q)
@@ -146,11 +153,11 @@ async def suggest(
 
 @router.get("/expand")
 async def expand_search(
+    engine: EngineDep,
+    tracker: TrackerDep,
     q: str = Query(..., min_length=1, max_length=500),
     user_id: str = Query("anonymous"),
     size: int = Query(10, ge=1, le=30),
-    engine: SearchEngine = Depends(get_es_engine),
-    tracker: PersonalizationTracker = Depends(get_tracker),
 ):
     """AI-powered query expansion: LLM reformulates vague queries, searches each."""
     from app.search.llm_expander import search_with_expansion
@@ -183,15 +190,15 @@ async def expand_search(
 
 @router.post("/event")
 async def track_event(
-    user_id: str,
-    event_type: str,
+    tracker: TrackerDep,
+    db: DbDep,
+    user_id: str = "",
+    event_type: str = "",
     product_id: str = "",
     category: str = "",
     query: str = "",
     position: int | None = None,
     session_id: str = "",
-    tracker: PersonalizationTracker = Depends(get_tracker),
-    db: AsyncSession = Depends(get_db),
 ):
     """Записать событие: click, cart, purchase.
 

@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     embed_model: str = "nomic-embed-text"
     es_index: str = "products"
     es_index_history: str = "search_history"
+    pg_user: str = "tenderhack"
+    pg_password: str = "tenderhack"
+    pg_host: str = "postgres"
+    pg_database: str = "tenderhack"
 
 
 settings = Settings()

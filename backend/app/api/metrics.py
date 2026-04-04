@@ -1,4 +1,6 @@
 """API роуты метрик качества поиска."""
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,11 +10,14 @@ from app.personalization.tracker import PersonalizationTracker
 
 router = APIRouter(prefix="/api/metrics", tags=["metrics"])
 
+DbDep = Annotated[AsyncSession, Depends(get_db)]
+TrackerDep = Annotated[PersonalizationTracker, Depends(get_tracker)]
+
 
 @router.get("/live")
 async def live_metrics(
+    db: DbDep,
     hours: int = Query(24, ge=1, le=720),
-    db: AsyncSession = Depends(get_db),
 ):
     """Живые метрики за последние N часов."""
     return await compute_live_metrics(db, hours)
@@ -21,8 +26,8 @@ async def live_metrics(
 @router.get("/history/{metric_name}")
 async def metric_history(
     metric_name: str,
+    db: DbDep,
     days: int = Query(7, ge=1, le=90),
-    db: AsyncSession = Depends(get_db),
 ):
     """История метрики для графика."""
     data = await get_metric_history(db, metric_name, days)
@@ -32,7 +37,7 @@ async def metric_history(
 @router.get("/user/{user_id}")
 async def user_stats(
     user_id: str,
-    tracker: PersonalizationTracker = Depends(get_tracker),
+    tracker: TrackerDep,
 ):
     """Статистика персонализации пользователя."""
     return await tracker.get_user_stats(user_id)

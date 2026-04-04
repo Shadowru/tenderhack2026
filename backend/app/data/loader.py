@@ -369,8 +369,8 @@ async def save_buyer_category_weights(
     logger.info("Saving buyer category weights to PostgreSQL...")
 
     conn = await asyncpg.connect(
-        user='tenderhack', password='tenderhack',
-        database='tenderhack', host='postgres',
+        user=settings.pg_user, password=settings.pg_password,
+        database=settings.pg_database, host=settings.pg_host,
     )
 
     try:
@@ -419,8 +419,8 @@ async def load_contracts_to_pg(contracts_path: Path):
     logger.info("Loading contracts into PostgreSQL...")
 
     conn = await asyncpg.connect(
-        user='tenderhack', password='tenderhack',
-        database='tenderhack', host='postgres',
+        user=settings.pg_user, password=settings.pg_password,
+        database=settings.pg_database, host=settings.pg_host,
     )
 
     try:

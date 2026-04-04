@@ -87,6 +87,9 @@ function ResultCard({ item, idx, onClickItem, query, userId }) {
       {/* Main row — clickable for tracking */}
       <div
         onClick={() => onClickItem(item, idx + 1)}
+        onKeyDown={(e) => e.key === 'Enter' && onClickItem(item, idx + 1)}
+        role="button"
+        tabIndex={0}
         className="cursor-pointer"
       >
         <div className="flex items-start justify-between gap-4">
@@ -246,6 +249,9 @@ function AiExpansionBlock({ aiLoading, aiResults, onClickItem, onSearchQuery }) 
               <div
                 key={`ai-${item.id || idx}`}
                 onClick={() => onClickItem(item, idx + 1)}
+                onKeyDown={(e) => e.key === 'Enter' && onClickItem(item, idx + 1)}
+                role="button"
+                tabIndex={0}
                 className="px-2 py-1.5 rounded hover:bg-purple-50 transition-all cursor-pointer group"
               >
                 <p className="text-xs text-gov-800 group-hover:text-purple-700 transition-colors leading-snug line-clamp-2">

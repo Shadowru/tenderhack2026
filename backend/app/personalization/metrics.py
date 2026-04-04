@@ -40,7 +40,7 @@
 import math
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select, func, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -161,7 +161,7 @@ async def _compute_precision_at_k_from_events(
 
 async def compute_live_metrics(db: AsyncSession, hours: int = 24) -> dict:
     """Посчитать живые метрики за последние N часов."""
-    since = datetime.utcnow() - timedelta(hours=hours)
+    since = datetime.now(timezone.utc) - timedelta(hours=hours)
 
     # Всего поисков
     total_searches = await db.scalar(
@@ -283,7 +283,7 @@ async def save_live_metric_snapshots(db: AsyncSession, hours: int = 24):
 
 async def get_metric_history(db: AsyncSession, metric_name: str, days: int = 7) -> list[dict]:
     """Получить историю метрики для графика."""
-    since = datetime.utcnow() - timedelta(days=days)
+    since = datetime.now(timezone.utc) - timedelta(days=days)
     result = await db.execute(
         select(SearchMetricSnapshot)
         .where(

@@ -1,7 +1,7 @@
 """Трекинг поведения пользователя и построение профиля для персонализации."""
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import asyncpg
 import redis.asyncio as redis
@@ -43,7 +43,7 @@ class PersonalizationTracker:
             "product_id": product_id,
             "category": category,
             "position": position,
-            "ts": datetime.utcnow().isoformat(),
+            "ts": datetime.now(timezone.utc).isoformat(),
         }
         key = f"user:{user_id}:events"
         await self.redis.lpush(key, json.dumps(event))
@@ -77,8 +77,8 @@ class PersonalizationTracker:
 
         try:
             conn = await asyncpg.connect(
-                user='tenderhack', password='tenderhack',
-                database='tenderhack', host='postgres',
+                user=settings.pg_user, password=settings.pg_password,
+                database=settings.pg_database, host=settings.pg_host,
             )
             try:
                 rows = await conn.fetch(
@@ -135,7 +135,7 @@ class PersonalizationTracker:
             # Refine scores with temporal decay using the event log
             events_key = f"user:{user_id}:events"
             raw_events = await self.redis.lrange(events_key, 0, 999)
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
 
             # Build decayed scores per product
             decayed: dict[str, float] = {}
