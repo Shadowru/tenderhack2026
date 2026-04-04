@@ -184,23 +184,52 @@ class SearchEngine:
                 }
             })
         else:
-            # Полный запрос → multi_match с fuzzy по всем полям
+            # Полный запрос → bool should с двумя стратегиями
             must.append({
-                "multi_match": {
-                    "query": query,
-                    "fields": [
-                        "subject^5",
-                        "subject.raw^4",
-                        "name^3",
-                        "name.ngram^1",
-                        "category^2",
-                        "description^1.5",
-                        "specifications",
+                "bool": {
+                    "should": [
+                        # Strategy 1: best_fields с fuzzy — ловит опечатки
+                        {
+                            "multi_match": {
+                                "query": query,
+                                "fields": [
+                                    "subject^5",
+                                    "subject.raw^4",
+                                    "name^3",
+                                    "name.ngram^1",
+                                    "category^2",
+                                    "description^1.5",
+                                    "specifications",
+                                ],
+                                "type": "best_fields",
+                                "fuzziness": "AUTO",
+                                "prefix_length": 1,
+                                "minimum_should_match": "70%",
+                            }
+                        },
+                        # Strategy 2: phrase match — бустит точные фразы
+                        # "туалетная бумага" ↔ "бумага туалетная"
+                        {
+                            "match_phrase": {
+                                "name": {
+                                    "query": query,
+                                    "boost": 12,
+                                    "slop": 3,
+                                }
+                            }
+                        },
+                        # Strategy 3: all words must match in name (AND)
+                        {
+                            "match": {
+                                "name": {
+                                    "query": query,
+                                    "operator": "and",
+                                    "boost": 6,
+                                }
+                            }
+                        },
                     ],
-                    "type": "best_fields",
-                    "fuzziness": "AUTO",
-                    "prefix_length": 1,
-                    "minimum_should_match": "70%",
+                    "minimum_should_match": 1,
                 }
             })
 
