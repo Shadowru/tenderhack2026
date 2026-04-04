@@ -309,9 +309,21 @@ def bpmn_gw(s, left, top, text):
     return shape
 
 def arrow(s, x1, y1, x2, y2):
-    c = s.shapes.add_connector(1, x1, y1, x2, y2)
-    c.line.color.rgb = RGBColor(0x88, 0x88, 0x88)
-    c.line.width = Pt(1.5)
+    """Draw arrow as thin rectangle — connectors can corrupt PPTX in some versions."""
+    thickness = Pt(2)
+    if abs(x2 - x1) > abs(y2 - y1):
+        # Horizontal
+        left = min(x1, x2)
+        width = abs(x2 - x1)
+        shape = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, y1 - thickness // 2, width, thickness)
+    else:
+        # Vertical
+        top = min(y1, y2)
+        height = abs(y2 - y1)
+        shape = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, x1 - thickness // 2, top, thickness, height)
+    shape.fill.solid()
+    shape.fill.fore_color.rgb = RGBColor(0x99, 0x99, 0x99)
+    shape.line.fill.background()
 
 # ---- Place steps ----
 
