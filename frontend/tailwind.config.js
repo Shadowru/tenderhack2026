@@ -27,6 +27,18 @@ export default {
           700: '#666',
           800: '#334059',
         },
+        portal: {
+          red: '#E53935',
+          'red-dark': '#C62828',
+          'red-light': '#FFEBEE',
+          blue: '#1976D2',
+          'blue-light': '#E3F2FD',
+          gray: '#F5F5F5',
+          border: '#E0E0E0',
+          text: '#333333',
+          'text-sec': '#666666',
+          'text-muted': '#999999',
+        },
       },
       fontFamily: {
         sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', '"Helvetica Neue"', 'Arial', 'sans-serif'],

@@ -73,172 +73,137 @@ function Toast({ message, visible }) {
 
 function ProductCardModal({ product, onClose, onAddToCart, onToggleFavorite, favoriteIds, userId }) {
   const [addedToCart, setAddedToCart] = useState(false)
+  const [activeTab, setActiveTab] = useState('general')
 
   if (!product) return null
 
   const productId = product.id || product.product_id
   const isFavorited = favoriteIds ? favoriteIds.has(productId) : false
 
-  // Parse specifications: may be a plain string "key: value\nkey: value" or an object
   const parseSpecs = (specs) => {
     if (!specs) return []
-    if (typeof specs === 'object' && !Array.isArray(specs)) {
-      return Object.entries(specs)
-    }
+    if (typeof specs === 'object' && !Array.isArray(specs)) return Object.entries(specs)
     if (typeof specs === 'string') {
-      return specs
-        .split(/\n|;/)
-        .map(line => line.trim())
-        .filter(Boolean)
-        .map(line => {
-          const colonIdx = line.indexOf(':')
-          if (colonIdx > 0) {
-            return [line.slice(0, colonIdx).trim(), line.slice(colonIdx + 1).trim()]
-          }
-          return [line, '']
-        })
+      return specs.split(/\n|;/).map(l => l.trim()).filter(Boolean).map(line => {
+        const ci = line.indexOf(':')
+        return ci > 0 ? [line.slice(0, ci).trim(), line.slice(ci + 1).trim()] : [line, '']
+      })
     }
     return []
   }
 
   const specRows = parseSpecs(product.specifications)
 
-  const handleAddToCart = () => {
-    if (onAddToCart) {
-      onAddToCart(product)
-      setAddedToCart(true)
-    }
-  }
-
-  const handleToggleFavorite = () => {
-    if (onToggleFavorite) {
-      onToggleFavorite(product)
-    }
-  }
-
-  // Close on overlay click
-  const handleOverlayClick = (e) => {
-    if (e.target === e.currentTarget) onClose()
-  }
+  const handleAddToCart = () => { if (onAddToCart) { onAddToCart(product); setAddedToCart(true) } }
+  const handleToggleFavorite = () => { if (onToggleFavorite) onToggleFavorite(product) }
+  const handleOverlayClick = (e) => { if (e.target === e.currentTarget) onClose() }
 
   return (
     <div className="modal-overlay" onClick={handleOverlayClick} style={{ zIndex: 55 }}>
-      <div className="modal-panel" style={{ maxWidth: '700px' }}>
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4 px-7 pt-6 pb-4 border-b border-grayish-100">
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              {product.category && (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-gov-50 text-gov-600 border border-gov-200">
-                  {product.category}
-                </span>
-              )}
-              {product.purchase_count > 0 && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-                  </svg>
-                  {product.purchase_count} закупок
-                </span>
-              )}
-              {product.popularity_score > 0 && (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-grayish-50 text-grayish-500 border border-grayish-200">
-                  Популярность: {product.popularity_score}
-                </span>
-              )}
-            </div>
-            <h2 className="text-base font-semibold text-gov-800 leading-snug">
-              {product.name}
-            </h2>
-            {product.subject && (
-              <p className="mt-1.5 text-sm text-grayish-500">{product.subject}</p>
-            )}
-            {product.unit && (
-              <p className="mt-1 text-xs text-grayish-400">
-                Единица измерения: <span className="font-medium text-gov-800">{product.unit}</span>
-              </p>
-            )}
+      <div className="modal-panel" style={{ maxWidth: '780px' }}>
+        {/* Breadcrumb + close */}
+        <div className="flex items-center justify-between px-6 pt-4 pb-2">
+          <div className="text-xs text-portal-text-muted">
+            Товары {product.category && <> &rsaquo; <span className="text-portal-blue">{product.category}</span></>}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Закрыть"
-            className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded text-grayish-400 hover:text-gov-800 hover:bg-grayish-50 transition-colors"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 6 6 18M6 6l12 12"/>
-            </svg>
+          <button type="button" onClick={onClose} aria-label="Закрыть"
+            className="w-8 h-8 flex items-center justify-center rounded text-grayish-400 hover:text-portal-text hover:bg-gray-100 transition-colors">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
           </button>
         </div>
 
-        {/* Specifications table */}
-        {specRows.length > 0 && (
-          <div className="px-7 py-5">
-            <p className="text-[10px] text-grayish-400 uppercase tracking-wider font-semibold mb-3">
-              Характеристики
-            </p>
-            <div className="rounded border border-grayish-100 overflow-hidden">
-              <table className="w-full text-xs border-collapse">
-                <tbody>
-                  {specRows.map(([key, value], i) => (
-                    <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-grayish-50'}>
-                      <td className="py-2 px-3 font-medium text-gov-800 w-2/5 border-r border-grayish-100 align-top leading-relaxed">
-                        {key}
-                      </td>
-                      <td className="py-2 px-3 text-grayish-500 leading-relaxed">
-                        {value || '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {/* Tab bar */}
+        <div className="flex border-b border-portal-border px-6">
+          {[
+            { id: 'general', label: 'ОБЩИЕ СВЕДЕНИЯ' },
+            { id: 'specs', label: 'ХАРАКТЕРИСТИКИ' },
+          ].map(tab => (
+            <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-3 text-xs font-semibold tracking-wide transition-colors relative ${
+                activeTab === tab.id ? 'text-portal-red' : 'text-portal-text-sec hover:text-portal-text'
+              }`}>
+              {tab.label}
+              {activeTab === tab.id && <span className="absolute bottom-0 left-0 right-0 h-[3px] bg-portal-red rounded-t" />}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab: General */}
+        {activeTab === 'general' && (
+          <div className="px-6 py-5">
+            <div className="flex gap-5">
+              {/* Left: placeholder image */}
+              <div className="w-28 h-28 rounded-lg bg-gray-100 border border-portal-border flex items-center justify-center flex-shrink-0">
+                <span className="text-3xl font-bold text-gray-300">{(product.category || 'T')[0]}</span>
+              </div>
+              {/* Center: info */}
+              <div className="flex-1 min-w-0">
+                <h2 className="text-base font-bold text-portal-text leading-snug">{product.name}</h2>
+                <div className="mt-2 space-y-1">
+                  <p className="text-xs"><span className="text-portal-text-muted">ID СТЕ:</span> <span className="text-portal-blue font-mono font-medium">{productId}</span></p>
+                  {product.category && <p className="text-xs"><span className="text-portal-text-muted">Категория:</span> <span className="text-portal-blue">{product.category}</span></p>}
+                  {product.subject && <p className="text-xs"><span className="text-portal-text-muted">Предмет:</span> <span className="text-portal-text">{product.subject}</span></p>}
+                  {product.unit && <p className="text-xs"><span className="text-portal-text-muted">Единица измерения:</span> <span className="text-portal-text font-medium">{product.unit}</span></p>}
+                </div>
+              </div>
+              {/* Right: stats card */}
+              <div className="w-44 flex-shrink-0 rounded-lg border border-portal-border bg-gray-50 p-4">
+                <div className="text-center mb-3">
+                  <div className="text-lg font-bold text-portal-text">{product.purchase_count || 0}</div>
+                  <div className="text-[10px] text-portal-text-muted uppercase tracking-wider">Контрактов</div>
+                </div>
+                <div className="border-t border-portal-border pt-3 text-center">
+                  <div className="text-lg font-bold text-portal-text">{Math.round(product.popularity || 0)}</div>
+                  <div className="text-[10px] text-portal-text-muted uppercase tracking-wider">Популярность</div>
+                </div>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Footer actions */}
-        <div className="flex items-center justify-between gap-4 px-7 py-4 bg-grayish-50 border-t border-grayish-100 rounded-b-lg">
-          {product.id && (
-            <span className="text-[10px] text-grayish-400 font-mono">ID: {product.id}</span>
-          )}
-          <div className="flex items-center gap-3 ml-auto">
-            <button
-              type="button"
-              onClick={onClose}
-              className="gov-btn-outline px-4 py-2 text-sm"
-            >
-              Закрыть
-            </button>
+        {/* Tab: Specifications */}
+        {activeTab === 'specs' && (
+          <div className="px-6 py-5">
+            {specRows.length > 0 ? (
+              <div className="rounded border border-portal-border overflow-hidden">
+                <table className="w-full text-xs border-collapse">
+                  <tbody>
+                    {specRows.map(([key, value], i) => (
+                      <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <td className="py-2.5 px-3 font-medium text-portal-text w-2/5 border-r border-portal-border align-top">{key}</td>
+                        <td className="py-2.5 px-3 text-portal-text-sec">{value || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-sm text-portal-text-muted text-center py-8">Характеристики не указаны</p>
+            )}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="flex items-center justify-between gap-4 px-6 py-4 bg-gray-50 border-t border-portal-border rounded-b-lg">
+          <span className="text-[10px] text-portal-text-muted font-mono">ID: {productId}</span>
+          <div className="flex items-center gap-2.5">
             {onToggleFavorite && (
-              <button
-                type="button"
-                onClick={handleToggleFavorite}
-                aria-label={isFavorited ? 'Убрать из избранного' : 'Добавить в избранное'}
+              <button type="button" onClick={handleToggleFavorite}
+                aria-label={isFavorited ? 'Убрать из избранного' : 'В избранное'}
                 className="flex items-center justify-center w-9 h-9 rounded border transition-colors"
-                style={{
-                  borderColor: isFavorited ? '#ef4444' : '#d1d5db',
-                  backgroundColor: isFavorited ? '#fef2f2' : 'transparent',
-                  color: isFavorited ? '#ef4444' : '#8c96ad',
-                }}
-              >
+                style={{ borderColor: isFavorited ? '#E53935' : '#E0E0E0', backgroundColor: isFavorited ? '#FFEBEE' : 'transparent', color: isFavorited ? '#E53935' : '#999' }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill={isFavorited ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                 </svg>
               </button>
             )}
             {onAddToCart && (
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                disabled={addedToCart}
-                className={`gov-btn px-5 py-2 text-sm flex items-center gap-2 ${addedToCart ? 'opacity-75' : ''}`}
-              >
+              <button type="button" onClick={handleAddToCart} disabled={addedToCart}
+                className={`portal-btn px-5 py-2.5 text-sm flex items-center gap-2 ${addedToCart ? 'opacity-70' : ''}`}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-                  <line x1="3" y1="6" x2="21" y2="6"/>
-                  <path d="M16 10a4 4 0 0 1-8 0"/>
+                  <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
                 </svg>
-                {addedToCart ? 'Добавлено' : 'Добавить в корзину'}
+                {addedToCart ? 'В корзине' : 'В корзину'}
               </button>
             )}
           </div>
@@ -260,19 +225,27 @@ function ResultCard({ item, idx, onClickItem, query, userId }) {
   }
 
   return (
-    <div className="gov-card hover:border-gov-300 transition-all group">
-      {/* Main row — clickable to open product modal */}
-      <button
-        type="button"
-        onClick={() => onClickItem(item, idx + 1)}
-        className="cursor-pointer w-full text-left"
-      >
-        <div className="flex items-start justify-between gap-4">
+    <div className="bg-white rounded border border-portal-border hover:border-gray-400 transition-all group p-4">
+      {/* Main row */}
+      <button type="button" onClick={() => onClickItem(item, idx + 1)} className="cursor-pointer w-full text-left">
+        <div className="flex gap-4">
+          {/* Image placeholder */}
+          <div className="w-16 h-16 rounded-lg bg-gray-100 border border-portal-border flex items-center justify-center flex-shrink-0">
+            <span className="text-lg font-bold text-gray-300">{(item.category || 'T').substring(0, 2)}</span>
+          </div>
+          {/* Info */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs text-grayish-400 font-mono">#{idx + 1}</span>
+            <h3 className="text-sm font-medium text-portal-text group-hover:text-portal-blue transition-colors leading-snug"
+              dangerouslySetInnerHTML={{ __html: item.highlight?.name?.[0] || item.name }} />
+            <div className="flex items-center gap-3 mt-1.5">
+              <span className="text-[11px] text-portal-blue font-mono">ID СТЕ: {item.id}</span>
+              {item.category && (
+                <span className="text-[11px] text-portal-text-muted">{item.category}</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 mt-1.5">
               {item.purchase_count > 0 && (
-                <span className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0">
+                <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0">
                   {item.purchase_count} закупок
                 </span>
               )}
@@ -282,27 +255,10 @@ function ResultCard({ item, idx, onClickItem, query, userId }) {
                 </span>
               )}
             </div>
-            <h3
-              className="text-sm font-medium text-gov-800 group-hover:text-gov-500 transition-colors leading-snug"
-              dangerouslySetInnerHTML={{
-                __html: item.highlight?.name?.[0] || item.name
-              }}
-            />
-            {item.category && (
-              <span className="inline-block mt-2 px-2 py-0.5 bg-grayish-50 text-grayish-400 text-xs rounded border border-grayish-100">
-                {item.category}
-              </span>
-            )}
           </div>
-          <div className="flex flex-col items-end gap-1 flex-shrink-0 pt-1">
-            {item.unit && (
-              <span className="text-xs text-grayish-400 border border-grayish-100 rounded px-2 py-0.5">
-                {item.unit}
-              </span>
-            )}
-            <span className="text-xs text-grayish-300 font-mono">
-              {item.score?.toFixed(2)}
-            </span>
+          {/* Right side */}
+          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+            <span className="text-[10px] text-portal-text-muted font-mono">{item.score?.toFixed(1)}</span>
           </div>
         </div>
       </button>
@@ -465,6 +421,9 @@ export default function SearchPage({ userId, onAddToCart, onToggleFavorite, favo
   // AI expansion state
   const [aiResults, setAiResults] = useState(null)
   const [aiLoading, setAiLoading] = useState(false)
+  const [sortMode, setSortMode] = useState('relevance')
+  const [filterPopular, setFilterPopular] = useState(false)
+  const [filterWithSpecs, setFilterWithSpecs] = useState(false)
 
   // Product card modal state
   const [selectedProduct, setSelectedProduct] = useState(null)
@@ -694,7 +653,7 @@ export default function SearchPage({ userId, onAddToCart, onToggleFavorite, favo
             <button
               type="submit"
               disabled={loading}
-              className="gov-btn rounded-l-none h-12 px-8 text-base rounded-r"
+              className="portal-btn rounded-l-none h-12 px-8 text-base rounded-r"
             >
               {loading ? (
                 <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
@@ -773,8 +732,24 @@ export default function SearchPage({ userId, onAddToCart, onToggleFavorite, favo
         <div className="flex gap-6 items-start">
           {/* Sidebar: categories */}
           {results.categories?.length > 0 && (
-            <aside className="w-60 flex-shrink-0 gov-card">
-              <h3 className="text-xs font-semibold text-grayish-400 uppercase tracking-wider mb-3">Категории</h3>
+            <aside className="w-60 flex-shrink-0 space-y-3">
+              {/* Filters */}
+              <div className="bg-white rounded border border-portal-border p-4">
+                <h3 className="text-xs font-semibold text-portal-text uppercase tracking-wider mb-3">Фильтры</h3>
+                <label className="flex items-center gap-2 text-xs text-portal-text-sec cursor-pointer mb-2">
+                  <input type="checkbox" checked={filterPopular} onChange={e => setFilterPopular(e.target.checked)}
+                    className="rounded border-portal-border text-portal-red focus:ring-portal-red" />
+                  Востребованный товар
+                </label>
+                <label className="flex items-center gap-2 text-xs text-portal-text-sec cursor-pointer">
+                  <input type="checkbox" checked={filterWithSpecs} onChange={e => setFilterWithSpecs(e.target.checked)}
+                    className="rounded border-portal-border text-portal-red focus:ring-portal-red" />
+                  С характеристиками
+                </label>
+              </div>
+              {/* Categories */}
+              <div className="bg-white rounded border border-portal-border p-4">
+              <h3 className="text-xs font-semibold text-portal-text uppercase tracking-wider mb-3">Категории</h3>
               <div className="space-y-0.5">
                 <button
                   onClick={() => handleCategoryClick(null)}
@@ -802,16 +777,29 @@ export default function SearchPage({ userId, onAddToCart, onToggleFavorite, favo
                   </button>
                 ))}
               </div>
+              </div>
             </aside>
           )}
 
           {/* Main results */}
           <div className="flex-1 min-w-0">
-            {/* Results header */}
+            {/* Results header with sort */}
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm text-grayish-400">
-                Найдено результатов: <span className="font-semibold text-gov-800">{results.total}</span>
+              <p className="text-sm text-portal-text-sec">
+                Найдено: <span className="font-semibold text-portal-text">{results.total}</span>
               </p>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-portal-text-muted">Сортировка:</span>
+                <select
+                  value={sortMode}
+                  onChange={e => setSortMode(e.target.value)}
+                  className="text-xs border border-portal-border rounded px-2 py-1 text-portal-text bg-white focus:outline-none focus:border-portal-blue"
+                >
+                  <option value="relevance">По релевантности</option>
+                  <option value="popularity">По популярности</option>
+                  <option value="name">По названию</option>
+                </select>
+              </div>
             </div>
 
             {/* Personalization banner */}
@@ -843,9 +831,15 @@ export default function SearchPage({ userId, onAddToCart, onToggleFavorite, favo
               </div>
             )}
 
-            {/* Result cards */}
+            {/* Result cards — sorted and filtered */}
             <div className="space-y-2">
-              {results.items.map((item, idx) => (
+              {(() => {
+                let items = [...(results.items || [])]
+                if (filterPopular) items = items.filter(i => (i.purchase_count || 0) >= 10)
+                if (filterWithSpecs) items = items.filter(i => i.specifications && i.specifications.length > 10)
+                if (sortMode === 'popularity') items.sort((a, b) => (b.purchase_count || 0) - (a.purchase_count || 0))
+                else if (sortMode === 'name') items.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ru'))
+                return items.map((item, idx) => (
                 <ResultCard
                   key={item.id || idx}
                   item={item}
@@ -854,7 +848,7 @@ export default function SearchPage({ userId, onAddToCart, onToggleFavorite, favo
                   query={query}
                   userId={userId}
                 />
-              ))}
+              ))})()}
             </div>
 
             {/* Load more button */}

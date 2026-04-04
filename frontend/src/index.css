@@ -31,6 +31,21 @@
   .gov-card {
     @apply bg-white rounded border border-grayish-100 p-5;
   }
+
+  /* Portal Postavshikov style buttons */
+  .portal-btn {
+    @apply inline-flex items-center justify-center px-5 py-2.5 text-white text-sm font-medium rounded transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2;
+    background-color: #E53935;
+    --tw-ring-color: #E53935;
+  }
+  .portal-btn:hover { background-color: #C62828; }
+
+  .portal-btn-outline {
+    @apply inline-flex items-center justify-center px-5 py-2.5 text-sm font-medium rounded transition-colors focus:outline-none;
+    border: 1px solid #E53935;
+    color: #E53935;
+  }
+  .portal-btn-outline:hover { background-color: #FFEBEE; }
 }
 
 mark {
