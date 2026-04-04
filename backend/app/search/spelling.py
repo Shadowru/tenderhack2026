@@ -102,19 +102,31 @@ def extract_subject(name: str) -> str:
         if after_brand:
             continue
 
-        parsed = morph.parse(wl)[0]
-        pos = parsed.tag.POS  # часть речи
-        case = parsed.tag.case  # падеж
+        # Check all parses — first may be wrong for ambiguous words
+        # e.g. "треска" → first parse: gent от "треск", but also nomn "треска" (fish)
+        parses = morph.parse(wl)
+        parsed = parses[0]
+        pos = parsed.tag.POS
+        case = parsed.tag.case
+
+        # Look for nominative interpretation among all parses
+        best_nomn = None
+        for p in parses:
+            if p.tag.POS == 'NOUN' and p.tag.case == 'nomn':
+                best_nomn = p
+                break
 
         if after_prep:
-            # После предлога — зависимое, пропускаем
             continue
 
         if pos == 'NOUN':
             if case in ('nomn', None):
                 subjects.append(parsed.normal_form)
+            elif best_nomn:
+                # Ambiguous word: first parse not nomn but alternative is
+                # e.g. "треска" → "треск"(gent) vs "треска"(nomn) → prefer nomn
+                subjects.append(best_nomn.normal_form)
             elif case == 'gent' and subjects:
-                # Родительный: "Набор реагентов"
                 subjects.append(parsed.normal_form)
         elif pos in ('ADJF', 'PRTF'):
             continue
