@@ -15,19 +15,32 @@ def _cart_key(user_id: str) -> str:
     return f"cart:{user_id}"
 
 
+def _names_key(user_id: str) -> str:
+    return f"cart_names:{user_id}"
+
+
 @router.get("")
 async def get_cart(
     tracker: TrackerDep,
     user_id: Annotated[str, Query()] = "anonymous",
 ):
-    """Return current cart contents as {product_id: quantity} mapping."""
+    """Return cart as list of {product_id, product_name, quantity}."""
+    redis = tracker.redis
     key = _cart_key(user_id)
-    raw = await tracker.redis.hgetall(key)
-    cart = {
-        (k.decode() if isinstance(k, bytes) else k): int(v)
-        for k, v in raw.items()
-    }
-    return {"user_id": user_id, "items": cart}
+    nkey = _names_key(user_id)
+
+    raw = await redis.hgetall(key)
+    names = await redis.hgetall(nkey)
+
+    items = []
+    for k, v in raw.items():
+        pid = k.decode() if isinstance(k, bytes) else k
+        qty = int(v)
+        name_raw = names.get(k, b"")
+        name = name_raw.decode() if isinstance(name_raw, bytes) else name_raw
+        items.append({"product_id": pid, "product_name": name or pid, "quantity": qty})
+
+    return {"user_id": user_id, "items": items}
 
 
 @router.post("/add")
@@ -35,21 +48,22 @@ async def add_to_cart(
     tracker: TrackerDep,
     user_id: Annotated[str, Query()] = "anonymous",
     product_id: Annotated[str, Query()] = "",
-    quantity: Annotated[int, Query(ge=1)] = 1,
+    product_name: Annotated[str, Query()] = "",
     category: Annotated[str, Query()] = "",
+    quantity: Annotated[int, Query(ge=1)] = 1,
 ):
-    """Add `quantity` units of `product_id` to the cart.
-
-    Also records a 'cart' event for personalization so the recommendation
-    engine learns from add-to-cart signals.
-    """
+    """Add item to cart. Stores name for display."""
     if not product_id:
         return {"ok": False, "error": "product_id is required"}
 
+    redis = tracker.redis
     key = _cart_key(user_id)
-    await tracker.redis.hincrby(key, product_id, quantity)
+    nkey = _names_key(user_id)
 
-    # Track cart event for personalization (non-anonymous users only)
+    await redis.hincrby(key, product_id, quantity)
+    if product_name:
+        await redis.hset(nkey, product_id, product_name)
+
     if user_id != "anonymous":
         await tracker.track_event(
             user_id=user_id,
@@ -58,7 +72,7 @@ async def add_to_cart(
             category=category,
         )
 
-    raw_qty = await tracker.redis.hget(key, product_id)
+    raw_qty = await redis.hget(key, product_id)
     new_quantity = int(raw_qty) if raw_qty is not None else quantity
     return {"ok": True, "product_id": product_id, "quantity": new_quantity}
 
@@ -70,26 +84,25 @@ async def remove_from_cart(
     product_id: Annotated[str, Query()] = "",
     quantity: Annotated[int, Query(ge=1)] = 1,
 ):
-    """Remove `quantity` units of `product_id` from the cart.
-
-    If the resulting quantity is <= 0, the item is deleted entirely.
-    """
+    """Remove item from cart. Deletes if quantity reaches 0."""
     if not product_id:
         return {"ok": False, "error": "product_id is required"}
 
+    redis = tracker.redis
     key = _cart_key(user_id)
-    raw_qty = await tracker.redis.hget(key, product_id)
+    nkey = _names_key(user_id)
+    raw_qty = await redis.hget(key, product_id)
     if raw_qty is None:
         return {"ok": False, "error": "product not in cart"}
 
-    current = int(raw_qty)
-    new_qty = current - quantity
+    new_qty = int(raw_qty) - quantity
     if new_qty <= 0:
-        await tracker.redis.hdel(key, product_id)
-        return {"ok": True, "product_id": product_id, "quantity": 0, "removed": True}
+        await redis.hdel(key, product_id)
+        await redis.hdel(nkey, product_id)
+        return {"ok": True, "product_id": product_id, "quantity": 0}
 
-    await tracker.redis.hset(key, product_id, new_qty)
-    return {"ok": True, "product_id": product_id, "quantity": new_qty, "removed": False}
+    await redis.hset(key, product_id, new_qty)
+    return {"ok": True, "product_id": product_id, "quantity": new_qty}
 
 
 @router.post("/clear")
@@ -97,7 +110,8 @@ async def clear_cart(
     tracker: TrackerDep,
     user_id: Annotated[str, Query()] = "anonymous",
 ):
-    """Delete the entire cart for `user_id`."""
-    key = _cart_key(user_id)
-    await tracker.redis.delete(key)
+    """Delete the entire cart."""
+    redis = tracker.redis
+    await redis.delete(_cart_key(user_id))
+    await redis.delete(_names_key(user_id))
     return {"ok": True, "user_id": user_id}

@@ -235,31 +235,34 @@ export default function App() {
     setShowModal(false)
   }
 
+  const refreshCart = async () => {
+    try {
+      const data = await getCart(userId)
+      setCartItems(data.items || [])
+    } catch { /* ignore */ }
+  }
+
   const handleAddToCart = async (product) => {
     const productId = product.id || product.product_id
     const productName = product.name || product.product_name || ''
     const category = product.category || ''
     try {
-      const data = await addToCart(userId, productId, productName, category)
-      setCartItems(data.items || [])
+      await addToCart(userId, productId, productName, category)
+      await refreshCart()
       setShowCart(true)
     } catch {
       // Optimistic update on failure
-      setCartItems(prev => {
-        const already = prev.some(i => (i.product_id || i.id) === productId)
-        if (already) return prev
-        return [...prev, { product_id: productId, product_name: productName, category }]
-      })
+      setCartItems(prev => [...prev, { product_id: productId, product_name: productName, quantity: 1 }])
       setShowCart(true)
     }
   }
 
   const handleRemoveFromCart = async (productId) => {
     try {
-      const data = await removeFromCart(userId, productId)
-      setCartItems(data.items || [])
+      await removeFromCart(userId, productId)
+      await refreshCart()
     } catch {
-      setCartItems(prev => prev.filter(i => (i.product_id || i.id) !== productId))
+      setCartItems(prev => prev.filter(i => i.product_id !== productId))
     }
   }
 
