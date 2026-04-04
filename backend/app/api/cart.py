@@ -75,6 +75,10 @@ async def add_to_cart(
             product_id=product_id,
             category=category,
         )
+        # Invalidate search cache so next search reflects personalization change
+        cache_keys = await redis.keys("cache:search:*")
+        if cache_keys:
+            await redis.delete(*cache_keys)
 
     raw_qty = await redis.hget(key, product_id)
     new_quantity = int(raw_qty) if raw_qty is not None else quantity
@@ -159,12 +163,18 @@ async def add_favorite(
     await redis.hset(key, product_id, product_name or product_id)
 
     if user_id != "anonymous":
+        # Track as "cart" weight (5.0) — stronger signal than click
         await tracker.track_event(
             user_id=user_id,
-            event_type="click",
+            event_type="cart",
             product_id=product_id,
             category=category,
         )
+        # Invalidate search cache so next search reflects the change
+        import re as _re
+        keys = await redis.keys(f"cache:search:*")
+        if keys:
+            await redis.delete(*keys)
 
     return {"ok": True, "product_id": product_id}
 
