@@ -218,13 +218,24 @@ class SearchEngine:
                                 }
                             }
                         },
-                        # Strategy 3: all words must match in name (AND)
+                        # Strategy 3: tight phrase match on name (slop=1)
+                        # "100 листов" matches "100 листов" but not "500 листов"
+                        {
+                            "match_phrase": {
+                                "name": {
+                                    "query": query,
+                                    "boost": 20,
+                                    "slop": 1,
+                                }
+                            }
+                        },
+                        # Strategy 4: all words must match in name (AND) — high boost
                         {
                             "match": {
                                 "name": {
                                     "query": query,
                                     "operator": "and",
-                                    "boost": 6,
+                                    "boost": 15,
                                 }
                             }
                         },
