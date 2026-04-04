@@ -45,20 +45,37 @@ def clean_text(text: str) -> str:
 
 
 def parse_specifications(raw: str) -> str:
-    """Парсинг спецификаций из формата 'key:value;key:value' в читаемый текст."""
+    """Парсинг спецификаций из формата 'key:value;key:value' в читаемый текст.
+
+    Deduplicated: identical key:value pairs appear only once.
+    Capped at 50 unique specs to avoid bloated index entries.
+    """
     raw = raw.strip().strip('"')
     parts = raw.split(';')
+    seen = set()
     specs = []
     for part in parts:
         part = part.strip()
+        if not part:
+            continue
         if ':' in part:
             key, _, val = part.partition(':')
             key = key.strip()
             val = val.strip()
             if val and val not in ('0', '0.00000', ''):
-                specs.append(f"{key}: {val}")
-        elif part:
-            specs.append(part)
+                canonical = f"{key}: {val}"
+            else:
+                continue
+        else:
+            canonical = part
+        # Deduplicate
+        key_lower = canonical.lower()
+        if key_lower in seen:
+            continue
+        seen.add(key_lower)
+        specs.append(canonical)
+        if len(specs) >= 50:
+            break
     return '; '.join(specs)
 
 
