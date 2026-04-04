@@ -98,6 +98,8 @@ def parse_ste_line(line: str) -> dict | None:
     ste_id = clean_text(parts[0])
     name = clean_text(parts[1])
     category = clean_text(parts[2])
+    # Normalize category: remove trailing dots/ellipsis
+    category = category.rstrip('.').rstrip(' ').rstrip('.')
     specs_raw = parts[3] if len(parts) > 3 else ''
 
     if not ste_id or not name:

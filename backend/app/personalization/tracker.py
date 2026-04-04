@@ -99,9 +99,8 @@ class PersonalizationTracker:
         pipe = self.redis.pipeline()
         for row in rows:
             category = row['category']
-            # Scale historical weight by purchase event weight so it blends
-            # naturally with live event tracking (purchase = 10.0).
-            weight = float(row['weight']) * EVENT_WEIGHTS['purchase']
+            # Historical data gets 70% weight — live events are more impactful
+            weight = float(row['weight']) * EVENT_WEIGHTS['purchase'] * 0.7
             pipe.zadd(cat_key, {category: weight})
         pipe.expire(cat_key, MAX_HISTORY_DAYS * 86400)
         await pipe.execute()
