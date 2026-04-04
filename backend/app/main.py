@@ -10,6 +10,7 @@ from app.deps import init_clients, close_clients
 from app.models.database import engine, Base
 from app.api.search import router as search_router
 from app.api.metrics import router as metrics_router
+from app.api.cart import router as cart_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -43,6 +44,7 @@ app.add_middleware(
 
 app.include_router(search_router)
 app.include_router(metrics_router)
+app.include_router(cart_router)
 
 
 @app.get("/health")

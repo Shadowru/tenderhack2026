@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 # Веса событий для расчёта интереса к категории/товару
 EVENT_WEIGHTS = {
+    "view": 2.0,      # Viewed product card
     "search": 1.0,
     "click": 3.0,
     "cart": 5.0,

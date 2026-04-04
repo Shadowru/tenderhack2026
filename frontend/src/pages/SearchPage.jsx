@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { searchProducts, searchBaseline, expandSearch, getSuggestions, trackEvent, SESSION_ID } from '../api.js'
+import { searchProducts, searchBaseline, expandSearch, getSuggestions, trackEvent, getProduct, SESSION_ID } from '../api.js'
 
 const REASON_ICONS = {
   text_match: (
@@ -71,6 +71,157 @@ function Toast({ message, visible }) {
   )
 }
 
+function ProductCardModal({ product, onClose, onAddToCart, userId }) {
+  const [addedToCart, setAddedToCart] = useState(false)
+
+  if (!product) return null
+
+  // Parse specifications: may be a plain string "key: value\nkey: value" or an object
+  const parseSpecs = (specs) => {
+    if (!specs) return []
+    if (typeof specs === 'object' && !Array.isArray(specs)) {
+      return Object.entries(specs)
+    }
+    if (typeof specs === 'string') {
+      return specs
+        .split(/\n|;/)
+        .map(line => line.trim())
+        .filter(Boolean)
+        .map(line => {
+          const colonIdx = line.indexOf(':')
+          if (colonIdx > 0) {
+            return [line.slice(0, colonIdx).trim(), line.slice(colonIdx + 1).trim()]
+          }
+          return [line, '']
+        })
+    }
+    return []
+  }
+
+  const specRows = parseSpecs(product.specifications)
+
+  const handleAddToCart = () => {
+    if (onAddToCart) {
+      onAddToCart(product)
+      setAddedToCart(true)
+    }
+  }
+
+  // Close on overlay click
+  const handleOverlayClick = (e) => {
+    if (e.target === e.currentTarget) onClose()
+  }
+
+  return (
+    <div className="modal-overlay" onClick={handleOverlayClick} style={{ zIndex: 55 }}>
+      <div className="modal-panel" style={{ maxWidth: '700px' }}>
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4 px-7 pt-6 pb-4 border-b border-grayish-100">
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              {product.category && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-gov-50 text-gov-600 border border-gov-200">
+                  {product.category}
+                </span>
+              )}
+              {product.purchase_count > 0 && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                  </svg>
+                  {product.purchase_count} закупок
+                </span>
+              )}
+              {product.popularity_score > 0 && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-grayish-50 text-grayish-500 border border-grayish-200">
+                  Популярность: {product.popularity_score}
+                </span>
+              )}
+            </div>
+            <h2 className="text-base font-semibold text-gov-800 leading-snug">
+              {product.name}
+            </h2>
+            {product.subject && (
+              <p className="mt-1.5 text-sm text-grayish-500">{product.subject}</p>
+            )}
+            {product.unit && (
+              <p className="mt-1 text-xs text-grayish-400">
+                Единица измерения: <span className="font-medium text-gov-800">{product.unit}</span>
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Закрыть"
+            className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded text-grayish-400 hover:text-gov-800 hover:bg-grayish-50 transition-colors"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 6 6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* Specifications table */}
+        {specRows.length > 0 && (
+          <div className="px-7 py-5">
+            <p className="text-[10px] text-grayish-400 uppercase tracking-wider font-semibold mb-3">
+              Характеристики
+            </p>
+            <div className="rounded border border-grayish-100 overflow-hidden">
+              <table className="w-full text-xs border-collapse">
+                <tbody>
+                  {specRows.map(([key, value], i) => (
+                    <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-grayish-50'}>
+                      <td className="py-2 px-3 font-medium text-gov-800 w-2/5 border-r border-grayish-100 align-top leading-relaxed">
+                        {key}
+                      </td>
+                      <td className="py-2 px-3 text-grayish-500 leading-relaxed">
+                        {value || '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Footer actions */}
+        <div className="flex items-center justify-between gap-4 px-7 py-4 bg-grayish-50 border-t border-grayish-100 rounded-b-lg">
+          {product.id && (
+            <span className="text-[10px] text-grayish-400 font-mono">ID: {product.id}</span>
+          )}
+          <div className="flex items-center gap-3 ml-auto">
+            <button
+              type="button"
+              onClick={onClose}
+              className="gov-btn-outline px-4 py-2 text-sm"
+            >
+              Закрыть
+            </button>
+            {onAddToCart && (
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={addedToCart}
+                className={`gov-btn px-5 py-2 text-sm flex items-center gap-2 ${addedToCart ? 'opacity-75' : ''}`}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                  <line x1="3" y1="6" x2="21" y2="6"/>
+                  <path d="M16 10a4 4 0 0 1-8 0"/>
+                </svg>
+                {addedToCart ? 'Добавлено' : 'Добавить в корзину'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ResultCard({ item, idx, onClickItem, query, userId }) {
   const [expanded, setExpanded] = useState(false)
 
@@ -84,7 +235,7 @@ function ResultCard({ item, idx, onClickItem, query, userId }) {
 
   return (
     <div className="gov-card hover:border-gov-300 transition-all group">
-      {/* Main row — clickable for tracking */}
+      {/* Main row — clickable to open product modal */}
       <button
         type="button"
         onClick={() => onClickItem(item, idx + 1)}
@@ -273,7 +424,7 @@ function AiExpansionBlock({ aiLoading, aiResults, onClickItem, onSearchQuery }) 
 
 const PAGE_SIZE = 20
 
-export default function SearchPage({ userId }) {
+export default function SearchPage({ userId, onAddToCart }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState(null)
   const [suggestions, setSuggestions] = useState([])
@@ -288,6 +439,11 @@ export default function SearchPage({ userId }) {
   // AI expansion state
   const [aiResults, setAiResults] = useState(null)
   const [aiLoading, setAiLoading] = useState(false)
+
+  // Product card modal state
+  const [selectedProduct, setSelectedProduct] = useState(null)
+  const [productLoading, setProductLoading] = useState(false)
+  const [productViewStart, setProductViewStart] = useState(null)
 
   // Reset results when user switches organization
   const prevUserId = useRef(userId)
@@ -310,10 +466,6 @@ export default function SearchPage({ userId }) {
     }
   }, [userId, query])
 
-  // Dwell time tracking: store when last item was clicked
-  const dwellTimestamp = useRef(null)
-  const lastClickedItem = useRef(null)
-
   const suggestTimer = useRef(null)
   const toastTimer = useRef(null)
 
@@ -324,36 +476,8 @@ export default function SearchPage({ userId }) {
     toastTimer.current = setTimeout(() => setToastVisible(false), 3000)
   }, [])
 
-  // Flush any pending dwell event when component unloads or new search begins
-  const flushDwellEvent = useCallback(() => {
-    if (dwellTimestamp.current && lastClickedItem.current) {
-      const elapsed = (Date.now() - dwellTimestamp.current) / 1000
-      if (elapsed < 3) {
-        trackEvent({
-          userId,
-          eventType: 'quick_return',
-          productId: lastClickedItem.current.id,
-          category: lastClickedItem.current.category,
-          query: lastClickedItem.current.query,
-          position: lastClickedItem.current.position,
-          sessionId: SESSION_ID,
-        })
-      }
-      dwellTimestamp.current = null
-      lastClickedItem.current = null
-    }
-  }, [userId])
-
-  // Flush dwell when userId changes or on unmount
-  useEffect(() => {
-    return () => flushDwellEvent()
-  }, [flushDwellEvent])
-
   const doSearch = useCallback(async (q, category = null, newOffset = 0) => {
     if (!q.trim()) return
-
-    // Flush any pending dwell event before a new search
-    flushDwellEvent()
 
     if (newOffset === 0) {
       setLoading(true)
@@ -388,7 +512,7 @@ export default function SearchPage({ userId }) {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [userId, flushDwellEvent])
+  }, [userId])
 
   const handleLoadMore = () => {
     const nextOffset = offset + PAGE_SIZE
@@ -426,10 +550,7 @@ export default function SearchPage({ userId }) {
     doSearch(query, category)
   }
 
-  const handleClick = (item, position) => {
-    // Flush any previous dwell before recording a new click
-    flushDwellEvent()
-
+  const handleProductClick = async (item, position) => {
     trackEvent({
       userId,
       eventType: 'click',
@@ -439,12 +560,35 @@ export default function SearchPage({ userId }) {
       position,
       sessionId: SESSION_ID,
     })
-
-    // Start dwell timer
-    dwellTimestamp.current = Date.now()
-    lastClickedItem.current = { id: item.id, category: item.category, query, position }
-
+    setProductLoading(true)
+    setProductViewStart(Date.now())
+    try {
+      const product = await getProduct(item.id, userId)
+      setSelectedProduct(product)
+    } catch {
+      // If product detail fetch fails, show item data directly
+      setSelectedProduct(item)
+    } finally {
+      setProductLoading(false)
+    }
     showToast()
+  }
+
+  const handleCloseProduct = () => {
+    if (productViewStart) {
+      const dwellMs = Date.now() - productViewStart
+      if (dwellMs < 3000) {
+        trackEvent({
+          userId,
+          eventType: 'quick_return',
+          productId: selectedProduct?.id,
+          query,
+          sessionId: SESSION_ID,
+        })
+      }
+    }
+    setSelectedProduct(null)
+    setProductViewStart(null)
   }
 
   const hasPersonalization = results?.items?.some(
@@ -470,6 +614,28 @@ export default function SearchPage({ userId }) {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Toast notification */}
       <Toast message={toastMsg} visible={toastVisible} />
+
+      {/* Product card modal */}
+      {productLoading && (
+        <div className="modal-overlay" style={{ zIndex: 55 }}>
+          <div className="flex items-center gap-3 bg-white rounded-lg px-6 py-4 shadow-xl border border-grayish-100">
+            <svg className="animate-spin h-5 w-5 text-gov-500" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            <span className="text-sm text-gov-800">Загрузка карточки товара...</span>
+          </div>
+        </div>
+      )}
+
+      {selectedProduct && (
+        <ProductCardModal
+          product={selectedProduct}
+          onClose={handleCloseProduct}
+          onAddToCart={onAddToCart}
+          userId={userId}
+        />
+      )}
 
       {/* Search bar */}
       <div className="gov-card mb-6">
@@ -656,7 +822,7 @@ export default function SearchPage({ userId }) {
                   key={item.id || idx}
                   item={item}
                   idx={idx}
-                  onClickItem={handleClick}
+                  onClickItem={handleProductClick}
                   query={query}
                   userId={userId}
                 />
@@ -701,7 +867,7 @@ export default function SearchPage({ userId }) {
               <AiExpansionBlock
                 aiLoading={aiLoading}
                 aiResults={aiResults}
-                onClickItem={handleClick}
+                onClickItem={handleProductClick}
                 onSearchQuery={(q) => { setQuery(q); doSearch(q) }}
               />
             </aside>

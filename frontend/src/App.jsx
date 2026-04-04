@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import SearchPage from './pages/SearchPage.jsx'
 import MetricsPage from './pages/MetricsPage.jsx'
+import { getCart, addToCart, removeFromCart, clearCart } from './api.js'
 
 const TABS = [
   { id: 'search', label: 'Поиск продукции' },
@@ -94,10 +95,113 @@ function UserSelectorModal({ onSelect }) {
   )
 }
 
+function CartPanel({ items, onRemove, onClear, onClose }) {
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-40 bg-black/20"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      {/* Slide-out panel */}
+      <div className="cart-panel" role="dialog" aria-label="Корзина">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-grayish-100 sticky top-0 bg-white z-10">
+          <div className="flex items-center gap-2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#334059" strokeWidth="2">
+              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <path d="M16 10a4 4 0 0 1-8 0"/>
+            </svg>
+            <h2 className="text-sm font-semibold text-gov-800">Корзина</h2>
+            {items.length > 0 && (
+              <span className="cart-badge">{items.length}</span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Закрыть корзину"
+            className="w-8 h-8 flex items-center justify-center rounded text-grayish-400 hover:text-gov-800 hover:bg-grayish-50 transition-colors"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 6 6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* Items */}
+        <div className="flex-1 px-4 py-3">
+          {items.length === 0 ? (
+            <div className="py-16 text-center">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#8c96ad" strokeWidth="1.5" className="mx-auto mb-3 opacity-50">
+                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <path d="M16 10a4 4 0 0 1-8 0"/>
+              </svg>
+              <p className="text-sm text-grayish-400">Корзина пуста</p>
+              <p className="text-xs text-grayish-300 mt-1">Добавьте товары из результатов поиска</p>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {items.map((item, i) => (
+                <div
+                  key={item.product_id || item.id || i}
+                  className="flex items-start gap-3 py-3 border-b border-grayish-50 last:border-0"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gov-800 leading-snug line-clamp-2">
+                      {item.product_name || item.name || item.product_id}
+                    </p>
+                    {item.category && (
+                      <p className="text-[11px] text-grayish-400 mt-0.5">{item.category}</p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onRemove(item.product_id || item.id)}
+                    aria-label="Удалить из корзины"
+                    className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded text-grayish-300 hover:text-red-500 hover:bg-red-50 transition-colors mt-0.5"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        {items.length > 0 && (
+          <div className="px-4 py-4 border-t border-grayish-100 sticky bottom-0 bg-white">
+            <button
+              type="button"
+              onClick={onClear}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-red-600 border border-red-200 rounded hover:bg-red-50 transition-colors"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>
+              </svg>
+              Очистить корзину
+            </button>
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
 export default function App() {
   const [tab, setTab] = useState('search')
   const [selectedUser, setSelectedUser] = useState(null)
   const [showModal, setShowModal] = useState(false)
+
+  // Cart state
+  const [cartItems, setCartItems] = useState([])
+  const [showCart, setShowCart] = useState(false)
 
   // Restore from localStorage on first render
   useEffect(() => {
@@ -112,18 +216,78 @@ export default function App() {
     setShowModal(true)
   }, [])
 
+  const userId = selectedUser?.inn ?? 'anonymous'
+
+  // Load cart when userId changes
+  useEffect(() => {
+    if (userId !== 'anonymous') {
+      getCart(userId)
+        .then(data => setCartItems(data.items || []))
+        .catch(() => setCartItems([]))
+    } else {
+      setCartItems([])
+    }
+  }, [userId])
+
   const handleSelectUser = (user) => {
     setSelectedUser(user)
     localStorage.setItem(STORAGE_KEY, user.inn)
     setShowModal(false)
   }
 
-  const userId = selectedUser?.inn ?? 'anonymous'
+  const handleAddToCart = async (product) => {
+    const productId = product.id || product.product_id
+    const productName = product.name || product.product_name || ''
+    const category = product.category || ''
+    try {
+      const data = await addToCart(userId, productId, productName, category)
+      setCartItems(data.items || [])
+      setShowCart(true)
+    } catch {
+      // Optimistic update on failure
+      setCartItems(prev => {
+        const already = prev.some(i => (i.product_id || i.id) === productId)
+        if (already) return prev
+        return [...prev, { product_id: productId, product_name: productName, category }]
+      })
+      setShowCart(true)
+    }
+  }
+
+  const handleRemoveFromCart = async (productId) => {
+    try {
+      const data = await removeFromCart(userId, productId)
+      setCartItems(data.items || [])
+    } catch {
+      setCartItems(prev => prev.filter(i => (i.product_id || i.id) !== productId))
+    }
+  }
+
+  const handleClearCart = async () => {
+    try {
+      await clearCart(userId)
+    } catch {
+      // ignore
+    }
+    setCartItems([])
+  }
+
+  const cartCount = cartItems.length
 
   return (
     <div className="min-h-screen flex flex-col bg-grayish-50">
       {/* User selector modal */}
       {showModal && <UserSelectorModal onSelect={handleSelectUser} />}
+
+      {/* Cart panel */}
+      {showCart && (
+        <CartPanel
+          items={cartItems}
+          onRemove={handleRemoveFromCart}
+          onClear={handleClearCart}
+          onClose={() => setShowCart(false)}
+        />
+      )}
 
       {/* Top bar */}
       <div className="bg-gov-800 text-white text-xs">
@@ -191,13 +355,40 @@ export default function App() {
                 </button>
               ))}
             </nav>
+
+            {/* Spacer */}
+            <div className="flex-1" />
+
+            {/* Cart icon button */}
+            <button
+              type="button"
+              onClick={() => setShowCart(prev => !prev)}
+              aria-label={`Корзина, ${cartCount} товаров`}
+              className="relative flex items-center justify-center w-10 h-10 rounded text-grayish-400 hover:text-gov-800 hover:bg-grayish-50 transition-colors"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <path d="M16 10a4 4 0 0 1-8 0"/>
+              </svg>
+              {cartCount > 0 && (
+                <span className="cart-badge absolute -top-1 -right-1">
+                  {cartCount > 99 ? '99+' : cartCount}
+                </span>
+              )}
+            </button>
           </div>
         </div>
       </header>
 
       {/* Content */}
       <main className="flex-1">
-        {tab === 'search' && <SearchPage userId={userId} />}
+        {tab === 'search' && (
+          <SearchPage
+            userId={userId}
+            onAddToCart={userId !== 'anonymous' ? handleAddToCart : null}
+          />
+        )}
         {tab === 'metrics' && <MetricsPage userId={userId} />}
       </main>
 

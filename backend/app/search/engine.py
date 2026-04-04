@@ -103,6 +103,14 @@ class SearchEngine:
     def __init__(self, es: AsyncElasticsearch):
         self.es = es
 
+    async def get_product(self, product_id: str) -> dict | None:
+        """Fetch a single product document from ES by its ID."""
+        try:
+            result = await self.es.get(index=settings.es_index, id=product_id)
+            return result["_source"]
+        except Exception:
+            return None
+
     async def ensure_index(self):
         """Создать индекс если не существует."""
         exists = await self.es.indices.exists(index=settings.es_index)

@@ -116,6 +116,65 @@ async def search(
     return result
 
 
+@router.get("/product/{product_id}")
+async def get_product(
+    product_id: str,
+    engine: EngineDep,
+    tracker: TrackerDep,
+    db: DbDep,
+    user_id: Annotated[str, Query()] = "anonymous",
+    session_id: Annotated[str, Query()] = "",
+):
+    """Fetch full product details by ES document ID and log a view event."""
+    from fastapi import HTTPException
+
+    source = await engine.get_product(product_id)
+    if source is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    # Parse flat "Key: Value; Key: Value" specifications string into structured list
+    specs_list: list[dict] = []
+    raw_specs = source.get("specifications", "")
+    if raw_specs:
+        for part in raw_specs.split("; "):
+            if ": " in part:
+                k, v = part.split(": ", 1)
+                specs_list.append({"key": k, "value": v})
+
+    # Track view event for personalization (non-anonymous users only)
+    if user_id != "anonymous":
+        category = source.get("category", "")
+        await tracker.track_event(
+            user_id=user_id,
+            event_type="view",
+            product_id=product_id,
+            category=category,
+        )
+
+    # Log to DB
+    db.add(SearchEvent(
+        user_id=user_id,
+        query="",
+        product_id=product_id,
+        event_type="view",
+        session_id=session_id,
+    ))
+    await db.commit()
+
+    return {
+        "id": product_id,
+        "name": source.get("name"),
+        "category": source.get("category"),
+        "category_code": source.get("category_code"),
+        "unit": source.get("unit"),
+        "subject": source.get("subject"),
+        "specifications": specs_list,
+        "popularity": source.get("popularity", 0),
+        "purchase_count": source.get("purchase_count", 0),
+        "description": source.get("description"),
+    }
+
+
 @router.get("/suggest")
 async def suggest(
     engine: EngineDep,
