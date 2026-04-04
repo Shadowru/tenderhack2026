@@ -185,91 +185,84 @@ function AiExpansionBlock({ aiLoading, aiResults, onClickItem, onSearchQuery }) 
   if (!aiLoading && !aiResults) return null
 
   return (
-    <div className="mt-5 bg-white rounded border border-purple-200 overflow-hidden">
-      {/* Header bar */}
+    <div className="sticky top-4 bg-white rounded border border-purple-200 overflow-hidden">
+      {/* Header */}
       <button
         onClick={() => hasResults && setCollapsed(!collapsed)}
-        className="w-full flex items-center gap-2.5 px-4 py-3 bg-purple-50 border-b border-purple-100 text-left hover:bg-purple-100 transition-colors"
+        className="w-full flex items-center gap-2 px-3 py-2.5 bg-purple-50 border-b border-purple-100 text-left hover:bg-purple-100 transition-colors"
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2.5" className="flex-shrink-0">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2.5" className="flex-shrink-0">
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
         </svg>
-        <span className="text-sm font-semibold text-purple-800">AI-расширение поиска</span>
+        <span className="text-xs font-semibold text-purple-800 leading-tight">AI-поиск</span>
 
         {aiLoading && (
-          <svg className="animate-spin h-3.5 w-3.5 text-purple-500" viewBox="0 0 24 24" fill="none">
+          <svg className="animate-spin h-3 w-3 text-purple-500" viewBox="0 0 24 24" fill="none">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
           </svg>
         )}
 
         {hasResults && !aiLoading && (
-          <span className="text-xs text-purple-600 font-medium">{itemCount} товаров</span>
-        )}
-
-        {aiResults && !hasResults && !aiLoading && (
-          <span className="text-xs text-grayish-400 italic">ничего дополнительного</span>
+          <span className="text-[10px] text-purple-600 font-medium">{itemCount}</span>
         )}
 
         <div className="flex-1" />
 
         {hasResults && (
-          <svg
-            width="14" height="14" viewBox="0 0 24 24" fill="none"
-            stroke="#7c3aed" strokeWidth="2"
-            className={`flex-shrink-0 transition-transform ${collapsed ? '' : 'rotate-180'}`}
-          >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"
+            className={`flex-shrink-0 transition-transform ${collapsed ? '' : 'rotate-180'}`}>
             <path d="m6 9 6 6 6-6"/>
           </svg>
         )}
       </button>
 
-      {/* Loading state */}
+      {/* Loading */}
       {aiLoading && !aiResults && (
-        <div className="px-4 py-5 text-center text-sm text-purple-500">
-          Анализирую категории и подбираю товары...
+        <div className="px-3 py-4 text-center text-xs text-purple-500">
+          Подбираю товары...
         </div>
       )}
 
-      {/* Content — shown by default, collapsible */}
+      {/* Content */}
       {!collapsed && hasResults && (
-        <div className="p-4">
+        <div className="p-2.5">
           {/* Category chips */}
-          <div className="flex flex-wrap gap-1.5 mb-3">
+          <div className="flex flex-wrap gap-1 mb-2">
             {aiResults.expansions.map((exp, i) => (
               <button
                 key={i}
                 onClick={() => onSearchQuery(exp.query)}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded border border-purple-200 hover:bg-purple-100 transition-colors"
+                className="px-2 py-0.5 bg-purple-50 text-purple-700 text-[10px] font-medium rounded border border-purple-200 hover:bg-purple-100 transition-colors leading-tight"
               >
                 {exp.query}
-                {exp.category && (
-                  <span className="text-purple-400 text-[10px] font-normal">
-                    {exp.category.length > 35 ? exp.category.slice(0, 33) + '...' : exp.category}
-                  </span>
-                )}
               </button>
             ))}
           </div>
 
-          {/* Item list */}
-          <div className="space-y-1">
+          {/* Items */}
+          <div className="space-y-0.5">
             {aiResults.items?.slice(0, 5).map((item, idx) => (
               <div
                 key={`ai-${item.id || idx}`}
                 onClick={() => onClickItem(item, idx + 1)}
-                className="flex items-center gap-2.5 px-3 py-2 rounded bg-white border border-purple-100 hover:border-purple-300 hover:bg-purple-50 transition-all cursor-pointer group"
+                className="px-2 py-1.5 rounded hover:bg-purple-50 transition-all cursor-pointer group"
               >
-                <span className="text-[9px] text-white bg-purple-500 rounded px-1.5 py-0.5 font-bold flex-shrink-0 leading-none">AI</span>
-                <span className="text-sm text-gov-800 group-hover:text-purple-700 transition-colors truncate flex-1">
+                <p className="text-xs text-gov-800 group-hover:text-purple-700 transition-colors leading-snug line-clamp-2">
                   {item.name}
-                </span>
-                <span className="text-[10px] text-grayish-400 flex-shrink-0 hidden sm:inline max-w-[200px] truncate">
+                </p>
+                <p className="text-[10px] text-grayish-400 mt-0.5 truncate">
                   {item.found_in_category || item.category}
-                </span>
+                </p>
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {aiResults && !hasResults && !aiLoading && (
+        <div className="px-3 py-3 text-[10px] text-grayish-400 text-center italic">
+          Нет дополнительных результатов
         </div>
       )}
     </div>
@@ -679,13 +672,17 @@ export default function SearchPage({ userId }) {
             )}
           </div>
 
-          {/* AI expansion results — collapsible */}
-          <AiExpansionBlock
-            aiLoading={aiLoading}
-            aiResults={aiResults}
-            onClickItem={handleClick}
-            onSearchQuery={(q) => { setQuery(q); doSearch(q) }}
-          />
+          {/* AI expansion — right sidebar */}
+          {(aiLoading || aiResults) && (
+            <aside className="w-72 flex-shrink-0">
+              <AiExpansionBlock
+                aiLoading={aiLoading}
+                aiResults={aiResults}
+                onClickItem={handleClick}
+                onSearchQuery={(q) => { setQuery(q); doSearch(q) }}
+              />
+            </aside>
+          )}
         </div>
       )}
 
