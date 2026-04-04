@@ -82,7 +82,13 @@ function ProductCardModal({ product, onClose, onAddToCart, onToggleFavorite, fav
 
   const parseSpecs = (specs) => {
     if (!specs) return []
-    if (typeof specs === 'object' && !Array.isArray(specs)) return Object.entries(specs)
+    // API returns [{key, value}] array
+    if (Array.isArray(specs)) {
+      return specs.map(s => [s.key || s[0] || '', s.value || s[1] || ''])
+    }
+    // Object {key: value}
+    if (typeof specs === 'object') return Object.entries(specs)
+    // String "key: value; key: value"
     if (typeof specs === 'string') {
       return specs.split(/\n|;/).map(l => l.trim()).filter(Boolean).map(line => {
         const ci = line.indexOf(':')
