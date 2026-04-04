@@ -215,49 +215,87 @@ slide = prs.slides.add_slide(prs.slide_layouts[6])
 add_bg(slide, WHITE)
 slide_header(slide, 3, "ПРОЦЕСС ОБРАБОТКИ ЗАПРОСА (BPMN)")
 
-# BPMN flow — horizontal process with swimlanes
-lanes = [
-    ("Пользователь", Inches(1.0), RGBColor(0xE3, 0xF2, 0xFD)),
-    ("Backend", Inches(2.6), RGBColor(0xFB, 0xE9, 0xE7)),
-    ("Elasticsearch", Inches(4.2), RGBColor(0xE8, 0xF5, 0xE9)),
-    ("Redis / PG", Inches(5.8), RGBColor(0xFE, 0xF3, 0xE2)),
-]
+# Grid-based BPMN: 4 swimlanes, steps placed on explicit grid
+# Lane tops and heights
+L1_TOP = Inches(1.0)   # User
+L2_TOP = Inches(2.5)   # Backend
+L3_TOP = Inches(4.0)   # Elasticsearch
+L4_TOP = Inches(5.5)   # Redis/PG
+LANE_H = Inches(1.3)
+STEP_H = Inches(0.6)
+STEP_W = Inches(1.4)
+GAP = Inches(0.15)  # gap between steps
+
+# Column X positions (left edges)
+C1 = Inches(1.8)   # col 1
+C2 = Inches(3.5)   # col 2
+C3 = Inches(5.2)   # col 3 (gateway)
+C4 = Inches(6.4)   # col 4
+C5 = Inches(8.1)   # col 5
+C6 = Inches(9.8)   # col 6
+C7 = Inches(11.5)  # col 7 (end)
+
+# Lane label width
+LBL_W = Inches(1.1)
 
 # Draw swimlanes
+lanes = [
+    ("Пользователь", L1_TOP, RGBColor(0xE3, 0xF2, 0xFD)),
+    ("Backend (FastAPI)", L2_TOP, RGBColor(0xFB, 0xE9, 0xE7)),
+    ("Elasticsearch", L3_TOP, RGBColor(0xE8, 0xF5, 0xE9)),
+    ("Redis / PostgreSQL", L4_TOP, RGBColor(0xFE, 0xF3, 0xE2)),
+]
 for name, top, bg in lanes:
-    add_rect(slide, Inches(0.6), top, Inches(12.0), Inches(1.4), bg, RGBColor(0xD0, 0xD0, 0xD0))
-    add_text(slide, Inches(0.7), top + Inches(0.05), Inches(1.3), Inches(0.3),
-             name, font_size=9, color=DARK, bold=True)
+    add_rect(slide, Inches(0.4), top, Inches(12.5), LANE_H, bg, RGBColor(0xD0, 0xD0, 0xD0))
+    add_text(slide, Inches(0.45), top + Inches(0.02), LBL_W, Inches(0.25),
+             name, font_size=8, color=DARK, bold=True)
 
-# Process steps as rounded rects with arrows
-def bpmn_step(slide, left, top, width, text, color=DARK, fill=WHITE, is_start=False, is_end=False):
-    if is_start:
-        shape = slide.shapes.add_shape(MSO_SHAPE.OVAL, left, top, Inches(0.45), Inches(0.45))
-        shape.fill.solid()
-        shape.fill.fore_color.rgb = ACCENT_GREEN
-        shape.line.fill.background()
-        return shape
-    if is_end:
-        shape = slide.shapes.add_shape(MSO_SHAPE.OVAL, left, top, Inches(0.45), Inches(0.45))
-        shape.fill.solid()
-        shape.fill.fore_color.rgb = RED
-        shape.line.color.rgb = RED_DARK
-        shape.line.width = Pt(3)
-        return shape
+# Step midpoints (vertical center of each lane)
+def lane_mid(lane_top):
+    return lane_top + (LANE_H - STEP_H) / 2
 
-    shape = add_rounded_rect(slide, left, top, width, Inches(0.55), fill, RGBColor(0xBB, 0xBB, 0xBB))
+M1 = lane_mid(L1_TOP)
+M2 = lane_mid(L2_TOP)
+M3 = lane_mid(L3_TOP)
+M4 = lane_mid(L4_TOP)
+
+# Helper: step center X/Y for arrow endpoints
+def cx(left):
+    return left + STEP_W / 2
+
+def right_edge(left):
+    return left + STEP_W
+
+def bot_edge(top):
+    return top + STEP_H
+
+# Helpers
+def bpmn_step(s, left, top, text, fill=WHITE, w=STEP_W):
+    shape = add_rounded_rect(s, left, top, w, STEP_H, fill, RGBColor(0xBB, 0xBB, 0xBB))
     tf = shape.text_frame
     tf.word_wrap = True
     tf.paragraphs[0].text = text
     tf.paragraphs[0].font.size = Pt(8)
-    tf.paragraphs[0].font.color.rgb = color
+    tf.paragraphs[0].font.color.rgb = DARK
     tf.paragraphs[0].alignment = PP_ALIGN.CENTER
     tf.vertical_anchor = MSO_ANCHOR.MIDDLE
     return shape
 
-# Diamond (gateway)
-def bpmn_gateway(slide, left, top, text):
-    shape = slide.shapes.add_shape(MSO_SHAPE.DIAMOND, left, top, Inches(0.6), Inches(0.6))
+def bpmn_event(s, left, top, color, thick=False):
+    d = Inches(0.4)
+    shape = s.shapes.add_shape(MSO_SHAPE.OVAL, left, top + (STEP_H - d) / 2, d, d)
+    shape.fill.solid()
+    shape.fill.fore_color.rgb = color
+    if thick:
+        shape.line.color.rgb = color
+        shape.line.width = Pt(3)
+    else:
+        shape.line.fill.background()
+    return shape
+
+def bpmn_gw(s, left, top, text):
+    d = Inches(0.55)
+    shape = s.shapes.add_shape(MSO_SHAPE.DIAMOND, left, top + (STEP_H - d) / 2, d, d)
     shape.fill.solid()
     shape.fill.fore_color.rgb = RGBColor(0xFF, 0xF9, 0xC4)
     shape.line.color.rgb = RGBColor(0xF9, 0xA8, 0x25)
@@ -270,56 +308,79 @@ def bpmn_gateway(slide, left, top, text):
     tf.vertical_anchor = MSO_ANCHOR.MIDDLE
     return shape
 
-# Arrow connector
-def bpmn_arrow(slide, x1, y1, x2, y2):
-    connector = slide.shapes.add_connector(1, x1, y1, x2, y2)  # straight
-    connector.line.color.rgb = RGBColor(0x99, 0x99, 0x99)
-    connector.line.width = Pt(1.5)
+def arrow(s, x1, y1, x2, y2):
+    c = s.shapes.add_connector(1, x1, y1, x2, y2)
+    c.line.color.rgb = RGBColor(0x88, 0x88, 0x88)
+    c.line.width = Pt(1.5)
 
-# Row 1 — User lane
-bpmn_step(slide, Inches(2.0), Inches(1.35), 0, "", is_start=True)
-bpmn_step(slide, Inches(2.8), Inches(1.25), Inches(1.3), "Ввод запроса")
-bpmn_arrow(slide, Inches(2.45), Inches(1.55), Inches(2.8), Inches(1.55))
+# ---- Place steps ----
 
-# Row 2 — Backend lane
-bpmn_step(slide, Inches(2.8), Inches(2.85), Inches(1.1), "Нормализация\nраскладка")
-bpmn_step(slide, Inches(4.1), Inches(2.85), Inches(1.1), "Spell check\n490K словарь")
-bpmn_gateway(slide, Inches(5.45), Inches(2.75), "≤6\nсимв?")
-bpmn_step(slide, Inches(6.3), Inches(2.65), Inches(1.2), "Prefix\nsubject.raw")
-bpmn_step(slide, Inches(6.3), Inches(3.25), Inches(1.2), "Multi-match\n4 стратегии")
-bpmn_step(slide, Inches(7.8), Inches(2.85), Inches(1.2), "Function\nscore")
-bpmn_step(slide, Inches(9.2), Inches(2.85), Inches(1.1), "RAG\nLLM (Ollama)")
-bpmn_step(slide, Inches(10.5), Inches(2.85), Inches(1.1), "Формирование\nответа")
+# Lane 1: User
+start = bpmn_event(slide, C1, M1, ACCENT_GREEN)
+s_input = bpmn_step(slide, C2, M1, "Ввод запроса\nв строку поиска")
+end = bpmn_event(slide, C7, M1, RED, thick=True)
 
-# Row 3 — ES lane
-bpmn_step(slide, Inches(7.8), Inches(4.45), Inches(1.2), "BM25 + fuzzy\n+ synonyms")
-bpmn_step(slide, Inches(9.2), Inches(4.45), Inches(1.1), "Category\naggregation")
-bpmn_step(slide, Inches(10.5), Inches(4.45), Inches(1.1), "Filtered\nsearch")
+# Lane 2: Backend
+s_norm  = bpmn_step(slide, C1, M2, "Нормализация\nEN→RU раскладка")
+s_spell = bpmn_step(slide, C2, M2, "Spell check\n490K словарь")
+gw      = bpmn_gw(slide, C3 + Inches(0.4), M2, "≤6?")
+s_pfx   = bpmn_step(slide, C4, M2 - Inches(0.35), "Prefix поиск\nsubject.raw", w=STEP_W)
+s_full  = bpmn_step(slide, C4, M2 + Inches(0.35), "Multi-match\n4 стратегии", w=STEP_W)
+s_func  = bpmn_step(slide, C5, M2, "Function score\n+ бусты")
+s_rag   = bpmn_step(slide, C6, M2, "RAG\nLLM (Ollama)")
 
-# Row 4 — Redis/PG lane
-bpmn_step(slide, Inches(4.1), Inches(6.05), Inches(1.1), "Cold start\nPG → Redis")
-bpmn_step(slide, Inches(5.5), Inches(6.05), Inches(1.1), "Product\nboosts")
-bpmn_step(slide, Inches(6.9), Inches(6.05), Inches(1.1), "Category\nboosts")
-bpmn_step(slide, Inches(10.5), Inches(6.05), Inches(1.1), "Track event\nlog")
+# Lane 3: Elasticsearch
+s_bm25  = bpmn_step(slide, C4, M3, "BM25 + fuzzy\nsynonyms")
+s_agg   = bpmn_step(slide, C5, M3, "Aggregation\nкатегорий")
+s_filt  = bpmn_step(slide, C6, M3, "Filtered\nsearch")
 
-# End
-bpmn_step(slide, Inches(11.85), Inches(1.35), 0, "", is_end=True)
+# Lane 4: Redis/PG
+s_cold  = bpmn_step(slide, C1, M4, "Cold start\nPG → Redis")
+s_prod  = bpmn_step(slide, C2, M4, "Product\nboosts")
+s_cat   = bpmn_step(slide, C3, M4, "Category\nboosts")
+s_track = bpmn_step(slide, C6, M4, "Track events\nlog + session")
 
-# Vertical arrows (lane crossings)
-bpmn_arrow(slide, Inches(3.35), Inches(1.8), Inches(3.35), Inches(2.85))
-bpmn_arrow(slide, Inches(8.4), Inches(3.4), Inches(8.4), Inches(4.45))
-bpmn_arrow(slide, Inches(5.5), Inches(3.4), Inches(5.5), Inches(6.05))
-bpmn_arrow(slide, Inches(11.05), Inches(3.4), Inches(11.05), Inches(5.8))
-bpmn_arrow(slide, Inches(11.05), Inches(1.55), Inches(11.85), Inches(1.55))
+# ---- Arrows (strictly grid-aligned) ----
 
-# Horizontal arrows
-for x1, x2, y in [
-    (4.1, 4.1, 1.55), (3.9, 4.1, 3.1), (5.2, 5.45, 3.1),
-    (6.05, 6.3, 2.9), (6.05, 6.3, 3.5), (7.5, 7.8, 3.1),
-    (9.0, 9.2, 3.1), (10.3, 10.5, 3.1), (10.3, 10.5, 4.7),
-    (9.0, 9.2, 4.7), (8.0, 8.4, 6.3), (6.0, 6.3, 6.3),
-]:
-    bpmn_arrow(slide, Inches(x1), Inches(y), Inches(x2), Inches(y))
+# Lane 1 horizontal
+arrow(slide, C1 + Inches(0.4), M1 + STEP_H/2, C2, M1 + STEP_H/2)                 # start → input
+arrow(slide, right_edge(C6), M2 + STEP_H/2, C7, M1 + STEP_H/2)                    # rag → end (goes up)
+
+# Lane 1 → Lane 2 vertical
+arrow(slide, cx(C2), bot_edge(M1), cx(C2), M2)                                      # input → spell (down)
+arrow(slide, cx(C1), bot_edge(M1), cx(C1), M2)                                      # also norm
+
+# Lane 2 horizontal
+arrow(slide, right_edge(C1), M2 + STEP_H/2, C2, M2 + STEP_H/2)                    # norm → spell
+arrow(slide, right_edge(C2), M2 + STEP_H/2, C3 + Inches(0.4), M2 + STEP_H/2)     # spell → gateway
+arrow(slide, C3 + Inches(0.95), M2 + STEP_H/2 - Inches(0.15), C4, M2 - Inches(0.35) + STEP_H/2)  # gw → prefix
+arrow(slide, C3 + Inches(0.95), M2 + STEP_H/2 + Inches(0.15), C4, M2 + Inches(0.35) + STEP_H/2)  # gw → full
+arrow(slide, right_edge(C4), M2 - Inches(0.35) + STEP_H/2, C5, M2 + STEP_H/2)    # prefix → func
+arrow(slide, right_edge(C4), M2 + Inches(0.35) + STEP_H/2, C5, M2 + STEP_H/2)    # full → func
+arrow(slide, right_edge(C5), M2 + STEP_H/2, C6, M2 + STEP_H/2)                    # func → rag
+
+# Lane 2 → Lane 3 vertical
+arrow(slide, cx(C4), bot_edge(M2 + Inches(0.35)), cx(C4), M3)                       # full → bm25
+arrow(slide, cx(C5), bot_edge(M2), cx(C5), M3)                                       # func → agg
+arrow(slide, cx(C6), bot_edge(M2), cx(C6), M3)                                       # rag → filtered
+
+# Lane 3 horizontal
+arrow(slide, right_edge(C4), M3 + STEP_H/2, C5, M3 + STEP_H/2)                    # bm25 → agg
+arrow(slide, right_edge(C5), M3 + STEP_H/2, C6, M3 + STEP_H/2)                    # agg → filtered
+
+# Lane 2 → Lane 4 vertical
+arrow(slide, cx(C1), bot_edge(M2), cx(C1), M4)                                       # norm → cold start
+arrow(slide, cx(C6), bot_edge(M2), cx(C6), M4)                                       # rag → track
+
+# Lane 4 horizontal
+arrow(slide, right_edge(C1), M4 + STEP_H/2, C2, M4 + STEP_H/2)                    # cold → prod
+arrow(slide, right_edge(C2), M4 + STEP_H/2, C3, M4 + STEP_H/2)                    # prod → cat
+
+# Labels for gateway branches
+add_text(slide, C3 + Inches(0.55), M2 - Inches(0.55), Inches(0.5), Inches(0.2),
+         "Да", font_size=7, color=ACCENT_GREEN, bold=True)
+add_text(slide, C3 + Inches(0.55), M2 + Inches(0.7), Inches(0.5), Inches(0.2),
+         "Нет", font_size=7, color=RED, bold=True)
 
 # ================================================================
 # SLIDE 5: Personalization Demo
@@ -439,11 +500,11 @@ add_text(slide, Inches(1.0), Inches(5.8), Inches(11), Inches(0.4),
          font_size=13, color=GRAY, alignment=PP_ALIGN.CENTER)
 
 # Arrows between services
-bpmn_arrow(slide, Inches(3.8), Inches(2.3), Inches(4.5), Inches(2.3))
-bpmn_arrow(slide, Inches(5.9), Inches(3.1), Inches(5.9), Inches(3.8))
-bpmn_arrow(slide, Inches(2.4), Inches(3.1), Inches(2.4), Inches(3.8))
-bpmn_arrow(slide, Inches(7.3), Inches(2.3), Inches(8.0), Inches(2.3))
-bpmn_arrow(slide, Inches(7.3), Inches(4.6), Inches(8.0), Inches(4.6))
+arrow(slide, Inches(3.8), Inches(2.3), Inches(4.5), Inches(2.3))
+arrow(slide, Inches(5.9), Inches(3.1), Inches(5.9), Inches(3.8))
+arrow(slide, Inches(2.4), Inches(3.1), Inches(2.4), Inches(3.8))
+arrow(slide, Inches(7.3), Inches(2.3), Inches(8.0), Inches(2.3))
+arrow(slide, Inches(7.3), Inches(4.6), Inches(8.0), Inches(4.6))
 
 # ================================================================
 # SLIDE 8: Innovation highlights
