@@ -99,7 +99,7 @@
                    subject     events   metrics
 ```
 
-Docker Compose, 7 сервисов. Всё на одном сервере (32 ядра, 125GB RAM).
+Docker Compose, 7 сервисов + SonarQube. Всё на одном сервере (32 ядра, 125GB RAM).
 
 ---
 
@@ -111,9 +111,28 @@ Docker Compose, 7 сервисов. Всё на одном сервере (32 я
 
 3. **Cold start из 2M контрактов**: 4 190 организаций с готовыми профилями из реальных закупок. Персонализация работает с первого визита.
 
-4. **RAG через Ollama**: LLM + реальные категории из индекса. «Защита рук медицинская» → «перчатки нитриловые».
+4. **RAG через Ollama**: LLM + реальные категории из индекса. «Медицинские перчатки» → нитриловые, хирургические, латексные.
 
-5. **93% качество** на 134 тестовых запросах. Дедупликация спецификаций -21% размер индекса.
+5. **93% качество** на 134 тестовых запросах. SonarQube Quality Gate: OK.
+
+---
+
+## Слайд 7: Качество кода — SonarQube (10 сек)
+
+**https://tenderhack.extra.moscow/sonar/** — live dashboard
+
+| Показатель | Статус |
+|------------|--------|
+| Quality Gate | **OK** |
+| Vulnerabilities | 0 реальных (4 false positive — имя переменной `password`) |
+| Bugs | 0 (исправлены: GC task, JSX accessibility) |
+| Code Smells | 119 (cognitive complexity — приемлемо для хакатона) |
+
+Исправлено по результатам SonarQube:
+- Annotated type hints для FastAPI DI
+- `datetime.utcnow()` → `datetime.now(timezone.utc)`
+- Hardcoded credentials → env-overridable settings
+- JSX: role="button" + tabIndex для accessibility
 
 ---
 
@@ -128,7 +147,12 @@ Docker Compose, 7 сервисов. Всё на одном сервере (32 я
 | Среднее время ответа | **30 мс** |
 | Качество поиска | **93%** (топ-5) |
 | Размер индекса | **278 МБ** |
+| Синонимов | **123 правила** (7 доменов) |
+| Категорий нормализовано | **8 186 → 8 123** |
+| SonarQube Quality Gate | **OK** |
 
-**https://tenderhack.extra.moscow/** — работает прямо сейчас.
-
-**GitHub**: https://github.com/Shadowru/tenderhack2026
+| Ресурс | URL |
+|--------|-----|
+| Поиск | **https://tenderhack.extra.moscow/** |
+| SonarQube | **https://tenderhack.extra.moscow/sonar/** |
+| GitHub | **https://github.com/Shadowru/tenderhack2026** |

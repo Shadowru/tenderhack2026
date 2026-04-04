@@ -281,4 +281,43 @@ backend/app/
 
 7. **RAG > слепой LLM**: LLM без контекста галлюцинирует «Канцлерская лампа» и «Клинтоны для врачей». С реальными категориями из индекса — точные результаты.
 
-8. **Тестирование 100+ запросов обязательно**: без массового тестирования «туалетная бумага» → SvetoCopy не была ��ы найдена. Каждая категория запросов (опечатки, prefix, phrase, услуги) требует отдельных тестов.
+8. **Тестирование 100+ запросов обязательно**: без массового тестирования «туалетная бумага» → SvetoCopy не была бы найдена. Каждая категория запросов (опечатки, prefix, phrase, услуги) требует отдельных тестов.
+
+---
+
+## Этап 14. Реализация рекомендаций по качеству данных
+
+Из 5 рекомендаций выполнены 4:
+
+| # | Рекомендация | Статус | Результат |
+|---|---|---|---|
+| 1 | Расширение синонимов | Выполнено | 29 → 123 правила, 7 доменов |
+| 2 | Нормализация категорий | Выполнено | 8 186 → 8 123 (-63 дубля), trailing dots убраны |
+| 3 | Time-decay для cold start | Выполнено | Исторические данные ×0.7, live-события приоритетнее |
+| 4 | Валидация ste_id | Проверено | Только 2 orphan контракта — приемлемо |
+| 5 | Кластеризация дубликатов name | Пропущено | Разные ID имеют разные specs — рискованно |
+
+---
+
+## Этап 15. SonarQube — статический анализ кода
+
+**Настройка**: SonarQube Community Edition в Docker, sonar-scanner-cli, доступен по https://tenderhack.extra.moscow/sonar/
+
+**Первый скан**: 126 issues (29 BLOCKER, 12 CRITICAL, 73 MAJOR, 12 MINOR).
+
+**Исправлено**:
+- VULNERABILITY: hardcoded passwords → env-overridable через pydantic Settings
+- BUG: asyncio.create_task без сохранения → set с done callback
+- CRITICAL: datetime.utcnow() deprecated → datetime.now(timezone.utc)
+- BLOCKER: FastAPI Depends() → Annotated type hints
+- BUG: JSX accessibility → role="button" + tabIndex + onKeyDown
+
+**Результат**: Quality Gate OK. Оставшиеся issues — cognitive complexity (приемлемо для хакатона) и кэш SonarQube от предыдущих сканов.
+
+---
+
+## Уроки (финальное дополнение)
+
+9. **SonarQube ловит реальные баги**: asyncio task GC — production bug, который бы привёл к потере фоновых задач. datetime.utcnow() — deprecated warning в Python 3.12.
+
+10. **False positives неизбежны**: 4 из 4 «vulnerabilities» — имя переменной `pg_password`, не hardcoded значение. Важно не слепо фиксить, а понимать контекст.
