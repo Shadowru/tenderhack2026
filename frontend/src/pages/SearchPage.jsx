@@ -85,12 +85,10 @@ function ResultCard({ item, idx, onClickItem, query, userId }) {
   return (
     <div className="gov-card hover:border-gov-300 transition-all group">
       {/* Main row — clickable for tracking */}
-      <div
+      <button
+        type="button"
         onClick={() => onClickItem(item, idx + 1)}
-        onKeyDown={(e) => e.key === 'Enter' && onClickItem(item, idx + 1)}
-        role="button"
-        tabIndex={0}
-        className="cursor-pointer"
+        className="cursor-pointer w-full text-left"
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
@@ -130,7 +128,7 @@ function ResultCard({ item, idx, onClickItem, query, userId }) {
             </span>
           </div>
         </div>
-      </div>
+      </button>
 
       {/* Accordion toggle */}
       {(hasReasons || hasSpecs) && (
@@ -246,13 +244,11 @@ function AiExpansionBlock({ aiLoading, aiResults, onClickItem, onSearchQuery }) 
           {/* Items */}
           <div className="space-y-0.5">
             {aiResults.items?.slice(0, 5).map((item, idx) => (
-              <div
+              <button
+                type="button"
                 key={`ai-${item.id || idx}`}
                 onClick={() => onClickItem(item, idx + 1)}
-                onKeyDown={(e) => e.key === 'Enter' && onClickItem(item, idx + 1)}
-                role="button"
-                tabIndex={0}
-                className="px-2 py-1.5 rounded hover:bg-purple-50 transition-all cursor-pointer group"
+                className="w-full text-left px-2 py-1.5 rounded hover:bg-purple-50 transition-all cursor-pointer group"
               >
                 <p className="text-xs text-gov-800 group-hover:text-purple-700 transition-colors leading-snug line-clamp-2">
                   {item.name}
@@ -260,7 +256,7 @@ function AiExpansionBlock({ aiLoading, aiResults, onClickItem, onSearchQuery }) 
                 <p className="text-[10px] text-grayish-400 mt-0.5 truncate">
                   {item.found_in_category || item.category}
                 </p>
-              </div>
+              </button>
             ))}
           </div>
         </div>
