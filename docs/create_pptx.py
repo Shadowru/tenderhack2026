@@ -86,24 +86,24 @@ def add_multiline(slide, left, top, width, height, lines, font_size=16, color=DA
 
 
 def slide_header(slide, number, title):
-    """Add consistent header bar to slide."""
-    add_rect(slide, 0, 0, W, Inches(0.08), RED)
-    add_text(slide, Inches(0.8), Inches(0.3), Inches(1), Inches(0.4),
-             f"{number:02d}", font_size=14, color=RED, bold=True)
-    add_text(slide, Inches(1.3), Inches(0.25), Inches(10), Inches(0.5),
-             title, font_size=24, color=DARK, bold=True)
-    # Subtle line under header
-    add_rect(slide, Inches(0.8), Inches(0.75), Inches(11.7), Inches(0.02), RGBColor(0xE0, 0xE0, 0xE0))
+    """Add consistent header bar to slide — projector-friendly bold style."""
+    add_rect(slide, 0, 0, W, Inches(0.12), RED)
+    add_text(slide, Inches(0.8), Inches(0.3), Inches(1), Inches(0.5),
+             f"{number:02d}", font_size=18, color=RED, bold=True)
+    add_text(slide, Inches(1.4), Inches(0.22), Inches(10), Inches(0.6),
+             title, font_size=30, color=DARK, bold=True)
+    # Thick line under header
+    add_rect(slide, Inches(0.8), Inches(0.85), Inches(11.7), Inches(0.04), RGBColor(0xE0, 0xE0, 0xE0))
 
 
 def add_stat_card(slide, left, top, value, label, accent=RED):
-    card = add_rounded_rect(slide, left, top, Inches(2.4), Inches(1.4), WHITE, RGBColor(0xE0, 0xE0, 0xE0))
-    # Accent top bar
-    add_rect(slide, left + Inches(0.02), top + Inches(0.02), Inches(2.36), Inches(0.06), accent)
-    add_text(slide, left + Inches(0.3), top + Inches(0.25), Inches(1.8), Inches(0.6),
-             value, font_size=32, color=DARK, bold=True, alignment=PP_ALIGN.CENTER)
-    add_text(slide, left + Inches(0.2), top + Inches(0.85), Inches(2.0), Inches(0.4),
-             label, font_size=11, color=GRAY, alignment=PP_ALIGN.CENTER)
+    card = add_rounded_rect(slide, left, top, Inches(2.4), Inches(1.5), WHITE, RGBColor(0xD0, 0xD0, 0xD0))
+    # Thick accent top bar
+    add_rect(slide, left + Inches(0.02), top + Inches(0.02), Inches(2.36), Inches(0.1), accent)
+    add_text(slide, left + Inches(0.3), top + Inches(0.3), Inches(1.8), Inches(0.6),
+             value, font_size=36, color=DARK, bold=True, alignment=PP_ALIGN.CENTER)
+    add_text(slide, left + Inches(0.2), top + Inches(0.95), Inches(2.0), Inches(0.4),
+             label, font_size=13, color=GRAY, bold=True, alignment=PP_ALIGN.CENTER)
 
 
 # ================================================================
@@ -542,7 +542,66 @@ for i, (title, desc, color) in enumerate(innovations):
              desc, font_size=12, color=GRAY)
 
 # ================================================================
-# SLIDE 9: Thank you / CTA
+# SLIDE 9: Ranking Signals — Positive & Negative
+# ================================================================
+slide = prs.slides.add_slide(prs.slide_layouts[6])
+add_bg(slide, WHITE)
+slide_header(slide, 8, "СИГНАЛЫ РАНЖИРОВАНИЯ")
+
+# Two columns: positive (green) and negative (red)
+add_text(slide, Inches(0.8), Inches(1.2), Inches(5.5), Inches(0.5),
+         "ПОЗИТИВНЫЕ (повышают позицию)", font_size=20, color=ACCENT_GREEN, bold=True)
+add_rect(slide, Inches(0.8), Inches(1.7), Inches(5.5), Inches(0.05), ACCENT_GREEN)
+
+positives = [
+    ("Совпадение с предметом товара", "Subject extraction: поиск «ручка» → товары где ручка = предмет", "x5"),
+    ("Точная фраза в названии", "match_phrase slop:1 — «100 листов» выше «500 листов»", "x20"),
+    ("История закупок организации", "Cold start из контрактов: школа → бланки, больница → офисная", "x1.05"),
+    ("Добавлен в корзину / избранное", "Event cart (вес 5.0) → мгновенный product boost", "x2.0"),
+    ("Просмотр карточки > 3 сек", "Event view (вес 2.0) — заинтересовался, не bounce", "x1.5"),
+    ("Популярность (кол-во контрактов)", "log2p(popularity) — мягкий множитель", "x1-3"),
+]
+
+for i, (signal, desc, boost) in enumerate(positives):
+    y = Inches(1.95 + i * 0.7)
+    add_rect(slide, Inches(0.8), y, Inches(5.5), Inches(0.6), BG_GRAY if i % 2 == 0 else WHITE)
+    add_text(slide, Inches(1.0), y + Inches(0.05), Inches(3.5), Inches(0.25),
+             signal, font_size=13, color=DARK, bold=True)
+    add_text(slide, Inches(1.0), y + Inches(0.3), Inches(4.0), Inches(0.25),
+             desc, font_size=10, color=GRAY)
+    add_text(slide, Inches(5.2), y + Inches(0.1), Inches(1.0), Inches(0.35),
+             boost, font_size=14, color=ACCENT_GREEN, bold=True, alignment=PP_ALIGN.RIGHT)
+
+# Negative column
+add_text(slide, Inches(7.0), Inches(1.2), Inches(5.5), Inches(0.5),
+         "НЕГАТИВНЫЕ (понижают / исключают)", font_size=20, color=RED, bold=True)
+add_rect(slide, Inches(7.0), Inches(1.7), Inches(5.5), Inches(0.05), RED)
+
+negatives = [
+    ("Отрицание в запросе", "«не маслянных», «без латексных», «кроме» → must_not", "Исключ."),
+    ("Bounce (< 3 сек на карточке)", "Event quick_return — закрыл карточку быстро", "-сигнал"),
+    ("Слово — атрибут, не предмет", "«тачка с ручкой» → subject=тачка, ручка не предмет", "x0"),
+    ("Temporal decay", "DECAY_FACTOR = 0.95 на каждый день давности события", "×0.95/д"),
+    ("Историческая vs live-данные", "Контракты из PG дисконтируются ×0.7", "×0.7"),
+]
+
+for i, (signal, desc, effect) in enumerate(negatives):
+    y = Inches(1.95 + i * 0.7)
+    add_rect(slide, Inches(7.0), y, Inches(5.5), Inches(0.6), RGBColor(0xFE, 0xF0, 0xEF) if i % 2 == 0 else WHITE)
+    add_text(slide, Inches(7.2), y + Inches(0.05), Inches(3.5), Inches(0.25),
+             signal, font_size=13, color=DARK, bold=True)
+    add_text(slide, Inches(7.2), y + Inches(0.3), Inches(4.0), Inches(0.25),
+             desc, font_size=10, color=GRAY)
+    add_text(slide, Inches(11.2), y + Inches(0.1), Inches(1.2), Inches(0.35),
+             effect, font_size=14, color=RED, bold=True, alignment=PP_ALIGN.RIGHT)
+
+# Bottom note
+add_text(slide, Inches(0.8), Inches(6.4), Inches(12), Inches(0.4),
+         "Формула: Score = BM25(strategies) x Popularity(log2p) x ProductBoost(1-2) x CategoryBoost(1-1.05) + SubjectExact(+15) + SubjectFuzzy(+12)",
+         font_size=12, color=GRAY, bold=True, alignment=PP_ALIGN.CENTER)
+
+# ================================================================
+# SLIDE 10: Thank you / CTA
 # ================================================================
 slide = prs.slides.add_slide(prs.slide_layouts[6])
 add_bg(slide, DARK)

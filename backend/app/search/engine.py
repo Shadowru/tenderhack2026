@@ -137,7 +137,29 @@ class SearchEngine:
         category_boosts: {category: boost_weight} — персональные веса по категориям.
         """
         must = []
+        must_not = []
         filter_clauses = []
+
+        # Detect negation: "не X", "без X", "кроме X", "исключая X"
+        import re as _re
+        negation_match = _re.search(
+            r'\b(не|без|кроме|исключая|за\s*исключением)\s+(\S+)',
+            query, _re.IGNORECASE,
+        )
+        excluded_term = None
+        if negation_match:
+            excluded_raw = negation_match.group(2).lower()
+            excluded_term = excluded_raw
+            # Use common root (first N chars) on name.ngram (no stemming)
+            # to avoid stemmer inconsistencies: "маслянных" root "масл"
+            # matches "масляная" in standard analyzer
+            root = excluded_raw[:max(4, len(excluded_raw) - 3)]
+            must_not.append({"match_phrase_prefix": {"name.ngram": root}})
+            must_not.append({"match": {"name": excluded_raw}})
+            must_not.append({"match": {"subject": excluded_raw}})
+            # Remove the negation phrase from query for positive matching
+            query = query[:negation_match.start()] + query[negation_match.end():]
+            query = _re.sub(r'\s+', ' ', query).strip()
 
         words = query.strip().split()
         is_short = len(words) == 1 and len(words[0]) <= 6
@@ -343,6 +365,7 @@ class SearchEngine:
                     "query": {
                         "bool": {
                             "must": must,
+                            "must_not": must_not,
                             "should": should,
                             "filter": filter_clauses,
                         }
@@ -370,7 +393,10 @@ class SearchEngine:
         }
 
         result = await self.es.search(index=settings.es_index, body=body)
-        return self._format_response(result, query, user_boosts, category_boosts)
+        resp = self._format_response(result, query, user_boosts, category_boosts)
+        if excluded_term:
+            resp["excluded"] = excluded_term
+        return resp
 
     async def suggest(
         self,
