@@ -15,11 +15,63 @@ EN_TO_RU = str.maketrans(
 )
 
 
+# Транслитерация латиница→кириллица (phonetic)
+_TRANSLIT = {
+    'a': 'а', 'b': 'б', 'v': 'в', 'g': 'г', 'd': 'д', 'e': 'е',
+    'zh': 'ж', 'z': 'з', 'i': 'и', 'y': 'й', 'k': 'к', 'l': 'л',
+    'm': 'м', 'n': 'н', 'o': 'о', 'p': 'п', 'r': 'р', 's': 'с',
+    't': 'т', 'u': 'у', 'f': 'ф', 'kh': 'х', 'h': 'х', 'ts': 'ц',
+    'ch': 'ч', 'sh': 'ш', 'shch': 'щ', 'yu': 'ю', 'ya': 'я',
+    'yo': 'ё', 'j': 'й', 'x': 'кс', 'w': 'в', 'c': 'к',
+}
+
+def _transliterate(text: str) -> str:
+    """Convert Latin transliteration to Cyrillic."""
+    result = []
+    i = 0
+    t = text.lower()
+    while i < len(t):
+        # Try longest match first (4, 3, 2, 1 chars)
+        matched = False
+        for length in (4, 3, 2, 1):
+            chunk = t[i:i+length]
+            if chunk in _TRANSLIT:
+                result.append(_TRANSLIT[chunk])
+                i += length
+                matched = True
+                break
+        if not matched:
+            result.append(t[i])
+            i += 1
+    return ''.join(result)
+
+
 def fix_keyboard_layout(text: str) -> str | None:
-    """Если текст похож на русский, набранный в EN раскладке — конвертировать."""
-    if re.match(r"^[a-zA-Z\[\];',.\s`{}:\"<>~]+$", text):
-        return text.translate(EN_TO_RU)
-    return None
+    """Если текст из латинских символов — пробуем раскладку и транслит.
+    Выбираем вариант, который даёт больше известных русских слов."""
+    if not re.match(r"^[a-zA-Z\[\];',.\s`{}:\"<>~0-9]+$", text):
+        return None
+
+    layout_result = text.translate(EN_TO_RU)
+    translit_result = _transliterate(text)
+
+    # Score each result: check if words exist in pymorphy dictionary
+    def score(s):
+        words = re.findall(r'[а-яё]+', s.lower())
+        if not words:
+            return 0
+        known = sum(1 for w in words if morph.word_is_known(w))
+        return known / len(words)
+
+    layout_score = score(layout_result)
+    translit_score = score(translit_result)
+
+    if layout_score >= translit_score and layout_score > 0:
+        return layout_result
+    if translit_score > 0:
+        return translit_result
+    # Neither recognized — return layout as default
+    return layout_result
 
 
 def normalize_query(query: str) -> str:
